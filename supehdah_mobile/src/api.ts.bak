@@ -1,0 +1,654 @@
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const API = axios.create({
+  // Use the correct IP address for your Laravel server
+  baseURL: 'http://192.168.1.13:8000/api', // Updated to match actual running server IP
+  // Alternative options (uncomment as needed):
+  // baseURL: 'http://192.168.1.13:8000/api', // Specific IP address
+  // baseURL: 'http://10.0.2.2:8000/api', // For Android emulator
+  headers: { 
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  timeout: 15000, // Increase timeout to 15 seconds
+});
+
+// Automatically attach token to every request - check for both token and userToken
+API.interceptors.request.use(async (config) => {
+  // Try different token keys - some parts of the app might use different keys
+  const token = await AsyncStorage.getItem('token') || 
+                await AsyncStorage.getItem('userToken') || 
+                await AsyncStorage.getItem('accessToken');
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log('✅ Token attached to request');
+  } else {
+    console.log('⚠️ No token found for request');
+  }
+  
+  // Add cache busting parameters to availability endpoints only,
+  // and use a coarser timestamp (minutes not milliseconds)
+  if (config.url && config.url.includes('/availability/')) {
+    const separator = config.url.includes('?') ? '&' : '?';
+    // Round to nearest 30 seconds to reduce unique URLs
+    const timestamp = Math.floor(Date.now() / 30000) * 30000;
+    config.url = `${config.url}${separator}_t=${timestamp}`;
+  }
+  
+  return config;
+});
+
+// Create a custom axios retry mechanism
+let isRetryingGlobally = false;
+
+// Keep track of in-flight requests to avoid duplicate retries
+const pendingRequests = new Map();
+
+// Track connection status
+let isNetworkErrorReported = false;
+const checkNetworkStatus = async () => {
+  try {
+    // Try a basic fetch to check connectivity
+    const response = await fetch('https://www.google.com', { 
+      method: 'HEAD',
+      // Use a short timeout for the check
+      signal: AbortSignal.timeout(3000)
+    });
+    if (response.ok && isNetworkErrorReported) {
+      console.log('🌐 Network connection restored');
+      isNetworkErrorReported = false;
+    }
+    return response.ok;
+  } catch (e) {
+    if (!isNetworkErrorReported) {
+      console.log('🌐 Network appears to be offline');
+      isNetworkErrorReported = true;
+    }
+    return false;
+  }
+};
+
+// Response interceptor for handling errors and retrying
+API.interceptors.response.use(
+  (response) => {
+    // Clear from pending requests on success
+    if (response.config.url) {
+      pendingRequests.delete(response.config.url);
+    }
+    return response;
+  },
+  async (error) => {
+    const { config } = error;
+    
+    // Check if it's a network error
+    if (error.message && 
+        (error.message.includes('Network Error') || 
+         error.message.includes('timeout') || 
+         error.message.includes('connection refused'))) {
+      
+      // Check network status
+      const isOnline = await checkNetworkStatus();
+      if (!isOnline) {
+        console.log('🔄 Network issue detected, cannot retry until connection is restored');
+        return Promise.reject(error);
+      }
+    }
+    
+    // If we're already retrying globally, don't retry individual requests
+    if (isRetryingGlobally) {
+      return Promise.reject(error);
+    }
+    
+    // Retry for more endpoints, not just availability
+    if (!config || !config.url || (config as any)._retryCount >= 3) {
+      return Promise.reject(error);
+    }
+    
+    // Check if we already have a pending retry for this URL base
+    const urlBase = config.url.split('?')[0]; // Remove query params
+    if (pendingRequests.has(urlBase)) {
+      console.log(`Skipping duplicate retry for ${urlBase}`);
+      return Promise.reject(error);
+    }
+    
+    // Mark this URL as having a pending retry
+    pendingRequests.set(urlBase, true);
+    
+    // Set retry count
+    (config as any)._retryCount = (config as any)._retryCount || 0;
+    (config as any)._retryCount += 1;
+    
+    // Log retry attempt
+    console.log(`Retrying request to ${urlBase} (attempt ${(config as any)._retryCount}/3)`);
+    
+    // Wait with exponential backoff - increased delay
+    const delay = Math.pow(2, (config as any)._retryCount) * 1000; // Increased from 500ms to 1000ms
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    // Try a different API URL for each retry
+    if ((config as any)._retryCount === 1) {
+      config.baseURL = 'http://127.0.0.1:8000/api';
+    } else if ((config as any)._retryCount === 2) {
+      config.baseURL = 'http://10.0.2.2:8000/api';
+    } else if ((config as any)._retryCount === 3) {
+      config.baseURL = 'http://192.168.1.13:8000/api';
+    }
+    
+    try {
+      // Return a new promise with the retry
+      const result = await API(config);
+      
+      // Clean up the pending request
+      if (config.url) {
+        const urlBase = config.url.split('?')[0];
+        pendingRequests.delete(urlBase);
+      }
+      
+      return result;
+    } catch (retryError) {
+      // Clean up the pending request on failure too
+      if (config.url) {
+        const urlBase = config.url.split('?')[0];
+        pendingRequests.delete(urlBase);
+      }
+      throw retryError;
+    }
+  }
+);
+
+// Appointment availability API functions
+export interface Slot {
+  start: string;
+  end: string;
+  display_time: string;
+}
+
+export interface AvailabilityResponse {
+  is_available: boolean;
+  date: string;
+  slots: Slot[];
+  daily_limit?: number;
+  booked_count?: number;
+  slots_remaining?: number;
+}
+
+export interface DaySummary {
+  date: string;
+  day_name: string;
+  is_closed: boolean;
+  booked_count: number;
+  remaining_slots: number;
+  daily_limit: number;
+}
+
+export interface AvailabilitySummary {
+  today: {
+    is_closed: boolean;
+    booked_count: number;
+    remaining_slots: number;
+    daily_limit: number;
+  };
+  next_week: DaySummary[];
+  settings: {
+    daily_limit: number;
+    slot_duration: number;
+    default_start_time?: string;
+    default_end_time?: string;
+  };
+  timestamp?: number; // Server timestamp to detect changes
+  error?: boolean; // Flag to indicate if this is fallback data due to an error
+  offline?: boolean; // Flag to indicate if we're in offline mode
+  debug?: {
+    server_status?: number;
+    message?: string;
+    last_attempt?: string;
+  }; // Additional debugging information
+}
+
+export const getAvailableSlots = async (clinicId: number, date: string): Promise<AvailabilityResponse> => {
+  try {
+    const response = await API.get(`/clinics/${clinicId}/availability/slots/${date}`);
+    return response.data.data || { is_available: false, date, slots: [] };
+  } catch (error) {
+    console.error('Error fetching available slots:', error);
+    throw error;
+  }
+};
+
+// Pet interfaces
+export interface Pet {
+  id: string | number;
+  name: string;
+  breed?: string;
+  type?: string;
+  age?: number | string;
+  birthday?: string;
+  last_vaccination?: string | null;
+  vaccination_details?: string;
+  notes?: string;
+  image?: string | null;
+}
+
+// Robust getPets function with retry logic
+export const getPets = async (): Promise<Pet[]> => {
+  const fallbackPets: Pet[] = [];
+  
+  try {
+    // Try with axios first
+    try {
+      console.log('Fetching pets using Axios...');
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await API.get('/pets', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      
+      if (response.data?.status === 'success' || response.data?.data) {
+        console.log('✅ Pets fetched successfully with Axios');
+        return response.data?.data ?? [];
+      }
+    } catch (error: any) {
+      console.log('❌ Failed to fetch pets with Axios:', error.message || 'Unknown error');
+    }
+    
+    // Try with fetch as fallback
+    try {
+      console.log('Trying to fetch pets with raw fetch...');
+      const token = await AsyncStorage.getItem('userToken');
+      const baseUrl = API.defaults.baseURL || 'http://192.168.1.13:8000/api';
+      
+      const response = await fetch(`${baseUrl}/pets`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Pets fetched successfully with fetch');
+        return data?.data || [];
+      }
+    } catch (fetchError) {
+      console.log('❌ Failed to fetch pets with fetch:', fetchError);
+    }
+    
+    // Try alternative URLs as last resort
+    const alternativeUrls = [
+      'http://localhost:8000/api',
+      'http://127.0.0.1:8000/api',
+      'http://10.0.2.2:8000/api',
+      'http://192.168.1.13:8000/api'
+    ];
+    
+    for (const baseUrl of alternativeUrls) {
+      try {
+        console.log(`Trying to fetch pets from ${baseUrl}...`);
+        const token = await AsyncStorage.getItem('userToken');
+        
+        const response = await fetch(`${baseUrl}/pets`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ Pets fetched successfully from ${baseUrl}`);
+          
+          // Save this URL for future requests
+          if (API.defaults) {
+            API.defaults.baseURL = baseUrl;
+          }
+          
+          return data?.data || [];
+        }
+      } catch (e) {
+        console.log(`❌ Failed to fetch pets from ${baseUrl}`);
+      }
+    }
+    
+    // If all methods fail, return empty array
+    console.log('⚠️ All pet fetch attempts failed, returning empty array');
+    return fallbackPets;
+  } catch (error) {
+    console.error('Error in getPets function:', error);
+    return fallbackPets;
+  }
+};
+
+export const getAvailabilitySummary = async (clinicId: number): Promise<AvailabilitySummary> => {
+  console.log(`🔄 Static availability data for clinic ${clinicId}`);
+  
+  // Generate static data with today's date and next 7 days
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  
+  // Simple static data - always returns 20 slots available
+  const staticData: AvailabilitySummary = {
+    today: { is_closed: false, booked_count: 0, remaining_slots: 20, daily_limit: 20 },
+    next_week: Array(7).fill(null).map((_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() + i + 1);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+      
+      // Make Sunday closed, vary the slots for other days to make it look realistic
+      const isClosed = date.getDay() === 0;
+      const remainingSlots = isClosed ? 0 : 20 - (i % 5); // 20, 19, 18, 17, 16 slots
+      
+      return {
+        date: dateStr,
+        day_name: dayName,
+        is_closed: isClosed,
+        booked_count: isClosed ? 0 : (i % 5), // 0, 1, 2, 3, 4 bookings
+        remaining_slots: remainingSlots,
+        daily_limit: 20
+      };
+    }),
+    settings: { 
+      daily_limit: 20, 
+      slot_duration: 30, 
+      default_start_time: '09:00:00', 
+      default_end_time: '17:00:00' 
+    }
+  };
+
+  // Log for debugging
+  console.log('📊 Availability data:', JSON.stringify({
+    today: staticData.today.remaining_slots,
+    is_closed: staticData.today.is_closed,
+  }));
+  
+  return staticData;
+};
+
+export const getClinicCustomFields = async (clinicId: number) => {
+  // Return static custom fields
+  return [
+    { id: 1, label: 'Pet Name', type: 'text', required: true },
+    { id: 2, label: 'Pet Type', type: 'select', options: ['Dog', 'Cat', 'Bird', 'Other'], required: true },
+    { id: 3, label: 'Pet Age', type: 'number', required: false },
+    { id: 4, label: 'Reason for Visit', type: 'textarea', required: true }
+  ];
+};
+
+export const bookAppointment = async (clinicId: number, data: {
+  owner_name: string;
+  owner_phone: string;
+  appointment_date: string;
+  appointment_time: string;
+  responses: Array<{field_id: string | number, value: any}>;
+}) => {
+  console.log('Booking appointment with static data:', JSON.stringify(data));
+  
+  // Simulate successful booking
+  return {
+    status: 'success',
+    message: 'Appointment booked successfully',
+    appointment: {
+      id: Math.floor(Math.random() * 10000),
+      owner_name: data.owner_name,
+      owner_phone: data.owner_phone,
+      appointment_date: data.appointment_date,
+      appointment_time: data.appointment_time,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    }
+  };
+};
+  
+  return staticData;
+};
+    
+    // 2. Try with raw fetch as a backup approach with more detailed error handling
+    try {
+      console.log('Attempting to fetch availability using raw fetch...');
+      
+      // Build URL with all necessary parameters
+      const timestamp = new Date().getTime();
+      const randomValue = Math.random().toString(36).substring(7);
+      const baseUrl = API.defaults.baseURL || 'http://192.168.1.13:8000/api';
+      const requestUrl = `${baseUrl}/clinics/${clinicId}/availability/summary?_t=${timestamp}&_r=${randomValue}`;
+      
+      console.log('Fetch URL:', requestUrl);
+      
+      // Make the request with aggressive cache prevention and proper error handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      const response = await fetch(requestUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Availability data fetched successfully using fetch');
+        return data.data || fallbackData;
+      } else {
+        console.log(`❌ Server returned ${response.status} ${response.statusText}`);
+        
+        if (response.status === 500) {
+          console.log('💾 Likely a database connection issue on the server');
+          
+          // Return fallback data with debug info
+          return {
+            ...fallbackData,
+            error: true,
+            debug: {
+              server_status: response.status,
+              message: 'Server error - possibly database related',
+              last_attempt: new Date().toISOString()
+            }
+          };
+        } else if (response.status === 404) {
+          console.log('🔍 API endpoint may be incorrect or not implemented');
+        }
+        
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+    } catch (fetchError) {
+      console.log('❌ Direct fetch failed:', fetchError);
+    }
+    
+    // 3. Try alternative URLs directly as a last resort
+    const alternativeUrls = [
+      'http://localhost:8000/api',
+      'http://127.0.0.1:8000/api',
+      'http://10.0.2.2:8000/api',
+      'http://192.168.1.13:8000/api'
+    ];
+    
+    for (const baseUrl of alternativeUrls) {
+      try {
+        console.log(`Attempting to fetch from alternative URL: ${baseUrl}`);
+        const timestamp = new Date().getTime();
+        const randomValue = Math.random().toString(36).substring(7);
+        
+        // Use controller for better timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // shorter timeout for alternatives
+        
+        const response = await fetch(`${baseUrl}/clinics/${clinicId}/availability/summary?_t=${timestamp}&_r=${randomValue}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ Success with alternative URL ${baseUrl}`);
+          
+          // Save this successful URL as the default for future requests
+          API.defaults.baseURL = baseUrl;
+          
+          return data.data || fallbackData;
+        } else if (response.status === 500) {
+          // If we got a 500 error, server is reachable but has internal issues
+          console.log(`⚠️ Server at ${baseUrl} returned 500 error - database likely not set up`);
+        }
+      } catch (e) {
+        console.log(`❌ Failed with URL ${baseUrl}`);
+      }
+    }
+    
+    // If we've tried everything and nothing worked, return enhanced fallback data
+    console.log('⚠️ All fetching methods failed, returning fallback data');
+    
+    // Create more realistic fallback data for better UX during server issues
+    const enhancedFallback: AvailabilitySummary = {
+      ...fallbackData,
+      error: true,
+      debug: {
+        message: 'All server connection attempts failed',
+        last_attempt: new Date().toISOString()
+      }
+    };
+    
+    // Log key diagnostic info
+    console.log('📊 Availability data updated:', JSON.stringify({
+      booked: enhancedFallback.today.booked_count,
+      remaining: enhancedFallback.today.remaining_slots,
+      error: true
+    }));
+    
+    return enhancedFallback;
+  } catch (error) {
+    console.error('💥 Critical error in getAvailabilitySummary:', error);
+    
+    // Log key diagnostic info
+    console.log('📊 Availability data updated with error fallback:', JSON.stringify({
+      booked: fallbackData.today.booked_count,
+      remaining: fallbackData.today.remaining_slots,
+      error: true
+    }));
+    
+    return {
+      ...fallbackData,
+      error: true,
+      debug: {
+        message: `Critical error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        last_attempt: new Date().toISOString()
+      }
+    };
+  }
+};
+
+export const getClinicCustomFields = async (clinicId: number) => {
+  try {
+    const response = await API.get(`/clinics/${clinicId}/custom-fields`);
+    return response.data.data || {};
+  } catch (error) {
+    console.error('Error fetching custom fields:', error);
+    throw error;
+  }
+};
+
+export const bookAppointment = async (clinicId: number, data: {
+  owner_name: string;
+  owner_phone: string;
+  appointment_date: string;
+  appointment_time: string;
+  responses: Array<{field_id: string | number, value: any}>;
+}) => {
+  // Function to force availability refresh after booking
+  const forceAvailabilityRefresh = async () => {
+    try {
+      // Clear any potential caches
+      const timestamp = Date.now();
+      const randomValue = Math.random().toString(36).substring(7);
+      
+      // Make an immediate call to get fresh availability data
+      console.log('Forcing availability refresh after booking...');
+      await fetch(`${API.defaults.baseURL}/clinics/${clinicId}/availability/summary?_t=${timestamp}&_r=${randomValue}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      console.log('Availability data refreshed after booking');
+    } catch (refreshError) {
+      console.error('Error refreshing availability after booking:', refreshError);
+    }
+  };
+  try {
+    // Clear debug info for clarity
+    console.log('----------- DEBUG INFO -----------');
+    console.log('API BaseURL:', API.defaults.baseURL);
+    console.log('Full URL:', `${API.defaults.baseURL}/clinics/${clinicId}/appointments`);
+    console.log('Sending appointment data:', JSON.stringify(data, null, 2));
+    
+    // Test connection to server
+    try {
+      const pingResponse = await API.get('/clinics');
+      console.log('Connection test successful');
+    } catch (pingError) {
+      console.error('Connection test failed:', pingError);
+      
+      // Try alternative connection method with fetch API as backup
+      try {
+        console.log('Trying direct fetch API as backup...');
+        const backupResponse = await fetch(`${API.defaults.baseURL}/clinics/${clinicId}/appointments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const responseData = await backupResponse.json();
+        console.log('Backup fetch response:', responseData);
+        
+        // Force refresh availability data after booking
+        await forceAvailabilityRefresh();
+        
+        return responseData;
+      } catch (backupError) {
+        console.error('Backup fetch failed:', backupError);
+        throw backupError;
+      }
+    }
+    
+    const response = await API.post(`/clinics/${clinicId}/appointments`, data);
+    console.log('Appointment response:', response.data);
+    
+    // Force refresh availability data after booking
+    await forceAvailabilityRefresh();
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Error booking appointment:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+};

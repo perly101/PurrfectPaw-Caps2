@@ -1,0 +1,1281 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  RefreshControl,
+  SafeAreaView
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Calendar } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
+import { getAvailabilityCalendarDates, getAvailabilityCalendarSlots, TimeSlot } from '../src/calendarApi';
+import { API } from '../src/api';
+
+// Define Philippines timezone offset constant (UTC+8)
+const PH_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+type MarkedDates = {
+  [date: string]: {
+    selected?: boolean;
+    selectedColor?: string;
+    marked?: boolean;
+    dotColor?: string;
+  };
+};
+
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
+
+// Add proper React Navigation types with focus events
+type ClinicCalendarScreenProps = {
+  route: {
+    params?: {
+      clinicId?: number;
+      clinicName?: string;
+    };
+  };
+  navigation: NavigationProp<ParamListBase> & {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    addListener: (event: string, callback: () => void) => () => void;
+    reset: (state: any) => void;
+  };
+};
+
+const ClinicCalendarScreen = ({ route, navigation }: ClinicCalendarScreenProps) => {
+  const { clinicId = 1, clinicName = 'Clinic' } = route.params || {};
+  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [availabilityInfo, setAvailabilityInfo] = useState<{
+    totalSlots: number;
+    availableSlots: number;
+    bookedSlots: number;
+  }>({ totalSlots: 0, availableSlots: 0, bookedSlots: 0 });
+
+  // Fetch available dates for the calendar
+  const fetchAvailableDates = async () => {
+    try {
+      // Notify that we're using Philippines timezone
+      console.log('Using Philippines timezone (UTC+8) for all calendar operations');
+
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch available dates from our API endpoint
+      const response = await getAvailabilityCalendarDates(clinicId);
+      const availableDates: string[] = response.dates || [];
+      const closedDates: string[] = response.closed_dates || [];
+
+      console.log(`Received ${availableDates.length} available dates and ${closedDates.length} closed dates`);
+
+      // Create marked dates object for the calendar
+      const marked: MarkedDates = {};
+
+      // Mark available dates with green dots
+      availableDates.forEach((date: string) => {
+        marked[date] = {
+          marked: true,
+          dotColor: '#34D399' // brighter green
+        };
+      });
+
+      // Mark closed dates with red dots
+      closedDates.forEach((date: string) => {
+        marked[date] = {
+          marked: true,
+          dotColor: '#EF4444' // vivid red
+        };
+      });
+
+      setMarkedDates(marked);
+    } catch (err) {
+      console.error('Error fetching available dates:', err);
+      setError('Failed to load available dates. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if token exists and is valid
+  const checkTokenValid = async () => {
+    const token = await AsyncStorage.getItem('token') || 
+                await AsyncStorage.getItem('userToken') || 
+                await AsyncStorage.getItem('accessToken');
+                
+    if (!token) {
+      console.log('❌ No authentication token found');
+      
+      // Navigate to login if not already there
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      
+      Alert.alert(
+        'Authentication Required',
+        'Please log in to continue.',
+        [{ text: 'OK' }]
+      );
+      
+      return false;
+    }
+    return true;
+  };
+
+  // Fetch time slots for a selected date
+  const fetchTimeSlots = async (date: string) => {
+    try {
+      // Verify token is valid before proceeding
+      const tokenValid = await checkTokenValid();
+      if (!tokenValid) {
+        return;
+      }
+      
+      setIsLoadingSlots(true);
+
+      console.log(`Fetching time slots for date: ${date} and clinic: ${clinicId}`);
+      console.log(`💡 Adding timestamp to bust API cache and get fresh data`);
+
+      // Get the day of week for debugging
+      const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+      console.log(`Day of the week: ${dayOfWeek}`);
+
+      // Always clear any refresh markers to ensure we get fresh data
+      const refreshKey = `refresh_calendar_${clinicId}_${date}`;
+      try {
+        await AsyncStorage.removeItem(refreshKey);
+        console.log('Cleared any refresh markers to ensure fresh data');
+        
+        // Also clear any cached slots
+        await AsyncStorage.removeItem(`slots_cache_${clinicId}_${date}`);
+        console.log('Cleared any cached slots data');
+      } catch (e) {
+        console.log('Error clearing refresh markers:', e);
+      }
+      
+      // First, try to get a direct booking count before fetching slots
+      // This is the most reliable source of truth for bookings
+      console.log('🔍 Checking for direct booking count first...');
+      try {
+        const bookingCountUrl = `/clinics/${clinicId}/appointments/count?date=${date}&t=${new Date().getTime()}`;
+        const countResponse = await API.get(bookingCountUrl);
+        
+        if (countResponse?.data?.count !== undefined) {
+          console.log(`📊 Direct booking count from API: ${countResponse.data.count}`);
+          
+          if (countResponse.data.count > 0) {
+            // Pre-set the booking count so it shows immediately
+            setAvailabilityInfo(prevInfo => ({
+              ...prevInfo,
+              bookedSlots: countResponse.data.count
+            }));
+          }
+        }
+      } catch (countErr) {
+        console.log('No direct booking count available, will calculate from slots');
+      }
+
+      // Fetch time slots from our API endpoint - ensure we don't use cached data
+      // Add a timestamp to ensure we get fresh data
+      const cacheBuster = new Date().getTime();
+      const response = await getAvailabilityCalendarSlots(clinicId, date + `?cb=${cacheBuster}`);
+      
+      // Log the full response for debugging
+      console.log('API Response for time slots:', JSON.stringify(response, null, 2));
+      
+      let slotsData = response.slots || [];
+
+      // Check if there are any locally stored bookings
+      const localBookingsKey = `localBookings_${clinicId}_${date}`;
+      const localBookingsStr = await AsyncStorage.getItem(localBookingsKey);
+      let localBookings: any[] = [];
+
+      if (localBookingsStr) {
+        try {
+          localBookings = JSON.parse(localBookingsStr);
+          console.log(`Found ${localBookings.length} locally stored bookings for this date`);
+        } catch (e) {
+          console.error('Error parsing local bookings:', e);
+        }
+      }
+
+      // We'll rely on the server's data about booked slots
+      // Local bookings are just for reference, but the source of truth should be the database
+      console.log(`Received ${slotsData.length} time slots`);
+      console.log(`Total slots in response: ${response.totalSlots}`);
+      console.log(`Available slots in response: ${response.availableSlots}`);
+      console.log(`Booked slots in response: ${response.bookedSlots}`);
+
+      // Calculate how many slots should be available
+      const unavailableCount = response.totalSlots - response.availableSlots;
+      console.log(`Unavailable slots (not booked but not available): ${unavailableCount}`);
+
+      // Log the first few slots for debugging
+      if (slotsData.length > 0) {
+        console.log('Sample slots:');
+        slotsData.slice(0, 3).forEach((slot: TimeSlot, index: number) => {
+          console.log(`Slot ${index + 1}: ${slot.display_time} - ${slot.isBooked ? 'Booked' : 'Available'}`);
+        });
+      }
+
+      setTimeSlots(slotsData);
+
+      // Let's try to fetch the appointments directly to get an accurate count - this is the most reliable method
+      console.log(`Fetching appointments directly for a reliable count...`);
+      let appointmentsCount = 0;
+      let bookedSlots: string[] = [];
+      
+      try {
+        // Try multiple possible API structures and endpoints to find appointments
+        // This expanded set of URLs should help us locate where the appointment data is stored
+        const possibleUrls = [
+          // Standard clinic API endpoints with various formats
+          `/clinics/${clinicId}/appointments/count?date=${date}&t=${new Date().getTime()}`,
+          `/clinics/${clinicId}/appointments?date=${date}&t=${new Date().getTime()}`,
+          `/clinic/${clinicId}/appointments?date=${date}&t=${new Date().getTime()}`,
+          
+          // Try admin dashboard endpoints that might contain all bookings
+          `/admin/clinics/${clinicId}/appointments?date=${date}&t=${new Date().getTime()}`,
+          `/admin/dashboard/appointments?date=${date}&t=${new Date().getTime()}`,
+          `/admin/appointments?clinic_id=${clinicId}&date=${date}&t=${new Date().getTime()}`,
+          
+          // Try alternative date formats
+          `/clinics/${clinicId}/appointments?appointment_date=${date}&t=${new Date().getTime()}`,
+          
+          // Try directly accessing all appointments without date filter, then we'll filter client-side
+          `/clinics/${clinicId}/appointments?t=${new Date().getTime()}`
+        ];
+        
+        console.log(`🔍 Trying ${possibleUrls.length} different API endpoints to find appointments...`);
+        
+        // First try the specific count endpoints
+        for (const url of possibleUrls.filter(u => u.includes('/count'))) {
+          try {
+            console.log(`Trying count endpoint: ${url}`);
+            const countResponse = await API.get(url);
+            
+            if (countResponse?.data?.count !== undefined) {
+              appointmentsCount = countResponse.data.count;
+              console.log(`✅ Found appointment count from API: ${appointmentsCount}`);
+              break;
+            }
+          } catch (countErr) {
+            console.log(`No data from ${url}`);
+          }
+        }
+        
+        // If count endpoints failed, try the full appointment list endpoints
+        if (appointmentsCount === 0) {
+          for (const url of possibleUrls.filter(u => !u.includes('/count'))) {
+            try {
+              console.log(`Trying appointments endpoint: ${url}`);
+              const apptResponse = await API.get(url);
+              
+              // Check various possible response structures
+              let appointments = null;
+              if (apptResponse?.data?.appointments) {
+                appointments = apptResponse.data.appointments;
+              } else if (Array.isArray(apptResponse?.data)) {
+                appointments = apptResponse.data;
+              } else if (apptResponse?.data?.data && Array.isArray(apptResponse?.data?.data)) {
+                appointments = apptResponse.data.data;
+              }
+              
+              if (appointments && appointments.length > 0) {
+                console.log(`Direct API call found ${appointments.length} appointments in response`);
+                
+                // Filter by the current date if we got all appointments
+                if (!url.includes('date=')) {
+                  appointments = appointments.filter((appt: any) => {
+                    return appt.appointment_date === date || 
+                           appt.date === date || 
+                           (appt.appointment_time && appt.appointment_time.startsWith(date));
+                  });
+                  console.log(`After filtering for date ${date}: ${appointments.length} appointments`);
+                }
+                
+                if (appointments.length > 0) {
+                  appointmentsCount = appointments.length;
+                  
+                  // Track which slots are booked
+                  appointments.forEach((appt: any) => {
+                    const timeField = appt.appointment_time || appt.time || appt.start_time;
+                    if (timeField) {
+                      bookedSlots.push(timeField);
+                    }
+                  });
+                  
+                  console.log(`✅ Found ${appointmentsCount} appointments with ${bookedSlots.length} booked time slots`);
+                  break;
+                }
+              }
+            } catch (apptErr) {
+              console.log(`No data from ${url}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Failed to fetch appointments directly, using slot-based calculation as fallback');
+      }
+      
+      // Fallback: Count slots that are marked as booked
+      const bookedSlotsFromStatus = slotsData.filter((s: TimeSlot) => 
+        s.isBooked === true || s.status === 'booked'
+      ).length;
+      
+      console.log(`Calculated booked slots from slot status: ${bookedSlotsFromStatus}`);
+      
+      // Check if any slots have booking info in their data
+      let bookingFieldsCount = 0;
+      slotsData.forEach((slot: TimeSlot) => {
+        // Check various fields that might indicate booking status
+        if (
+          ((slot as any).bookings && (slot as any).bookings > 0) || 
+          ((slot as any).appointment_count && (slot as any).appointment_count > 0) ||
+          ((slot as any).booked_count && (slot as any).booked_count > 0) ||
+          (slot.isBooked === true) || 
+          (slot.status === 'booked') ||
+          ((slot as any).availability === false)
+        ) {
+          bookingFieldsCount++;
+        }
+      });
+      
+      console.log(`Slots with booking indicators in their data: ${bookingFieldsCount}`);
+      
+      // Get bookings from local storage as last resort
+      const localBookingsCount = localBookings.length;
+      console.log(`Local storage bookings count: ${localBookingsCount}`);
+      
+      // Try all methods to determine booked count - take the highest non-zero value
+      // This ensures we don't miss bookings from any source
+      const possibleCounts = [
+        appointmentsCount, 
+        bookedSlotsFromStatus,
+        bookingFieldsCount,
+        bookedSlots.length,
+        localBookingsCount,
+        response.bookedSlots || 0
+      ].filter(count => count > 0);
+      
+      // Use the highest number we find to ensure we don't undercount
+      // If all sources report 0, then use 0
+      const finalBookedCount = possibleCounts.length > 0 
+        ? Math.max(...possibleCounts) 
+        : 0;
+      
+      console.log(`Final booked count determined: ${finalBookedCount}`);
+      console.log(`Sources checked: API=${appointmentsCount}, SlotStatus=${bookedSlotsFromStatus}, BookedSlots=${bookedSlots.length}, Local=${localBookingsCount}, Response=${response.bookedSlots || 0}`);
+      
+      // As a last resort, if we still don't have any bookings but slots are marked as unavailable,
+      // assume they're booked (better to show a slot as booked than let multiple people book it)
+      if (finalBookedCount === 0 && unavailableCount > 0) {
+        console.log(`⚠️ No bookings found but ${unavailableCount} slots are unavailable. Using this as booking count.`);
+      }
+      
+      // Mark slots as booked based on the appointments we found
+      if (bookedSlots.length > 0) {
+        console.log(`Found ${bookedSlots.length} specific booked slots, marking them in UI`);
+        
+        // Create a new array with updated booking status
+        const updatedSlots = slotsData.map((slot: TimeSlot) => {
+          const isSlotBooked = bookedSlots.some(bookedTime => 
+            slot.start === bookedTime || 
+            (bookedTime && slot.start && slot.start.startsWith(bookedTime.split(':').slice(0, 2).join(':')))
+          );
+          
+          return {
+            ...slot,
+            isBooked: isSlotBooked || slot.isBooked,
+            status: isSlotBooked ? 'booked' : slot.status
+          };
+        });
+        
+        // Update the slots with the correct booking information
+        setTimeSlots(updatedSlots);
+      }
+      
+      // Count actually available slots directly from the time slots array
+      // A slot is available if it's not booked and not disabled
+      const actuallyAvailableSlots = slotsData.filter((slot: TimeSlot) => 
+        !slot.isBooked && 
+        slot.status !== 'booked' && 
+        ((slot as any).availability !== false)
+      ).length;
+      
+      // Also calculate the mathematical difference for verification
+      const availableSlotsCount = slotsData.length - finalBookedCount;
+      
+      console.log(`API reported booked slots: ${response.bookedSlots || 0}`);
+      console.log(`Count from bookedSlots: ${bookedSlots.length}`);
+      console.log(`Direct appointment count: ${appointmentsCount}`);
+      console.log(`Final booked slots count: ${finalBookedCount}`);
+      console.log(`Calculated available slots (total - booked): ${availableSlotsCount}`);
+      console.log(`Actually available slots (from slots array): ${actuallyAvailableSlots}`);
+      
+      // Use the most accurate count for available slots
+      // If there's a mismatch, use the directly counted value from the slots array
+      setAvailabilityInfo({
+        totalSlots: slotsData.length,
+        availableSlots: actuallyAvailableSlots,
+        bookedSlots: finalBookedCount
+      });
+    } catch (err: any) {
+      console.error('Error fetching time slots:', err);
+
+      // More detailed error logging
+      if (err.response) {
+        console.error('Error response data:', JSON.stringify(err.response.data, null, 2));
+        console.error('Error response status:', err.response.status);
+      } else if (err.request) {
+        console.error('No response received for request:', err.request);
+      } else {
+        console.error('Error message:', err.message);
+      }
+
+      setTimeSlots([]);
+      Alert.alert(
+        "Error",
+        "Failed to load available time slots. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  // Handle date selection in the calendar
+  const handleDateSelect = (day: { dateString: string }) => {
+    const dateString = day.dateString;
+
+    // Check if this date is marked in our markedDates object
+    if (!markedDates[dateString]) {
+      Alert.alert(
+        "Date Unavailable",
+        "Sorry, this date is not available for booking. Please select a date with a colored dot."
+      );
+      return;
+    }
+
+    // Check if this is a closed date (red dot)
+    if (markedDates[dateString]?.dotColor === '#EF4444') {
+      Alert.alert(
+        "Clinic Closed",
+        "Sorry, the clinic is closed on this date. Please select a date with a green dot."
+      );
+      return;
+    }
+
+    // Update the selected date
+    setSelectedDate(dateString);
+
+    // Update marked dates to show the selected date
+    const updatedMarkedDates = { ...markedDates };
+    Object.keys(updatedMarkedDates).forEach(date => {
+      if (updatedMarkedDates[date].selected) {
+        updatedMarkedDates[date] = {
+          ...updatedMarkedDates[date],
+          selected: false
+        };
+      }
+    });
+
+    updatedMarkedDates[dateString] = {
+      ...updatedMarkedDates[dateString],
+      selected: true,
+      selectedColor: '#2563EB' // Blue for selected date
+    };
+
+    setMarkedDates(updatedMarkedDates);
+
+    // Fetch time slots for this date
+    fetchTimeSlots(dateString);
+    
+    // Set a timer to refresh time slots after 5 seconds to catch any recent bookings
+    setTimeout(() => {
+      console.log('Auto-refreshing time slots to ensure latest data');
+      if (dateString === selectedDate) { // Only refresh if still looking at same date
+        fetchTimeSlots(dateString);
+      }
+    }, 5000);
+  };
+
+  // Handle time slot selection
+  const handleTimeSlotSelect = (slot: TimeSlot) => {
+    if (!selectedDate) return;
+
+    // Navigate directly to the ClinicAppointments tab with the selected date and time
+    console.log(`Navigating to ClinicAppointments with date: ${selectedDate} and time: ${slot.display_time}`);
+
+    // Use ClinicAppointments tab instead of BookAppointment screen
+    navigation.navigate('ClinicAppointments', {
+      clinicId,
+      clinicName,
+      date: selectedDate,
+      timeSlot: slot
+    });
+  };
+
+  // Pull to refresh - ensure a complete refresh of data
+  const onRefresh = async () => {
+    setRefreshing(true);
+    
+    try {
+      // Verify token is valid before proceeding
+      const tokenValid = await checkTokenValid();
+      if (!tokenValid) {
+        setRefreshing(false);
+        return;
+      }
+      
+      console.log('Performing complete refresh of calendar data');
+      
+      // Clear any cached data
+      if (selectedDate) {
+        await AsyncStorage.removeItem(`slots_cache_${clinicId}_${selectedDate}`);
+      }
+      
+      // Fetch fresh availability dates
+      await fetchAvailableDates();
+      
+      // If a date is selected, fetch fresh time slots
+      if (selectedDate) {
+        await fetchTimeSlots(selectedDate);
+      }
+    } catch (e) {
+      console.error('Error during refresh:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Initial data load
+  useEffect(() => {
+    fetchAvailableDates();
+  }, [clinicId]);
+  
+  // Add focus effect to refresh data when screen becomes active
+  useEffect(() => {
+    // Subscribe to focus events
+    const unsubscribe = navigation.addListener('focus', async () => {
+      console.log('🔄 Calendar screen focused, forcing COMPLETE data refresh');
+      
+      // Check if token is still valid
+      const tokenValid = await checkTokenValid();
+      if (!tokenValid) {
+        return; // Don't proceed if token invalid
+      }
+      
+      // Always refresh available dates to show any newly available/booked dates
+      fetchAvailableDates();
+      
+      // Clear any local cache and force fresh data
+      if (selectedDate) {
+        console.log('🔄 Forcing full refresh of calendar data on focus');
+        
+        // Try multiple approaches to clear cache
+        Promise.all([
+          // Clear all cache markers
+          AsyncStorage.removeItem(`slots_cache_${clinicId}_${selectedDate}`),
+          AsyncStorage.removeItem(`appointments_${clinicId}_${selectedDate}`),
+          // Set refresh markers with current timestamp
+          AsyncStorage.setItem(`refresh_${clinicId}_${selectedDate}`, new Date().toISOString()),
+          AsyncStorage.setItem(`force_refresh_${Date.now()}`, 'true')
+        ])
+        .then(() => {
+          console.log('🔄 Cache cleared, fetching fresh time slots...');
+          // Refresh time slots with guaranteed fresh data
+          fetchTimeSlots(selectedDate);
+          
+          // Double refresh after a short delay to catch any updates
+          setTimeout(() => {
+            console.log('🔄 Performing secondary refresh for verification...');
+            fetchTimeSlots(selectedDate);
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('Error during focus refresh:', err);
+        });
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, selectedDate, clinicId]);
+  
+  // Debug useEffect for booked slots
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      console.log(`--------- BOOKING COUNT DEBUG INFO ---------`);
+      console.log(`Total time slots: ${timeSlots.length}`);
+      console.log(`Current bookedSlots count: ${availabilityInfo.bookedSlots}`);
+      console.log(`Current availableSlots count: ${availabilityInfo.availableSlots}`);
+      
+      // Double check how many slots are actually marked as booked
+      const actualBookedSlots = timeSlots.filter(slot => slot.isBooked || slot.status === 'booked').length;
+      console.log(`Slots marked as booked in the array: ${actualBookedSlots}`);
+      
+      if (actualBookedSlots !== availabilityInfo.bookedSlots) {
+        console.warn(`⚠️ Booking count mismatch: UI shows ${availabilityInfo.bookedSlots}, but ${actualBookedSlots} slots are marked as booked`);
+      }
+      console.log(`--------------------------------------------`);
+    }
+  }, [timeSlots, availabilityInfo.bookedSlots]);
+  
+  // Debug useEffect for booked slots
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      // Count booked slots manually for debugging
+      const bookedCount = timeSlots.filter(s => s.isBooked === true || s.status === 'booked').length;
+      
+      console.log('------ APPOINTMENT BOOKING DEBUG ------');
+      console.log(`Current bookedSlots in state: ${availabilityInfo.bookedSlots}`);
+      console.log(`Manual count of booked slots: ${bookedCount}`);
+      console.log(`First few slots booking status:`);
+      timeSlots.slice(0, 3).forEach((s, idx) => {
+        console.log(`Slot ${idx+1}: ${s.display_time} - isBooked: ${s.isBooked}, status: ${s.status}`);
+      });
+      console.log('--------------------------------------');
+    }
+  }, [timeSlots, availabilityInfo.bookedSlots]);
+  
+  // Debug useEffect for booked slots
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      // Count booked slots manually for debugging
+      const bookedCount = timeSlots.filter(s => s.isBooked === true || s.status === 'booked').length;
+      
+      console.log('------ APPOINTMENT BOOKING DEBUG ------');
+      console.log(`Current bookedSlots in state: ${availabilityInfo.bookedSlots}`);
+      console.log(`Manual count of booked slots: ${bookedCount}`);
+      console.log(`First few slots booking status:`);
+      timeSlots.slice(0, 3).forEach((s, idx) => {
+        console.log(`Slot ${idx}: ${s.display_time} - isBooked: ${s.isBooked}, status: ${s.status}`);
+      });
+      console.log('--------------------------------------');
+    }
+  }, [timeSlots, availabilityInfo.bookedSlots]);
+
+  // Format date for display using Philippines timezone
+  const formatDateDisplay = (dateString: string | null) => {
+    if (!dateString) return '';
+
+    // Create date object
+    const date = new Date(dateString);
+
+    // Format options with explicit Philippines timezone
+    const options = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Manila'
+    } as const;
+
+    // Format as "Saturday, August 30, 2025"
+    return `${date.toLocaleDateString('en-US', options).replace(/\d{1,2}, /, '').replace(', ', ', ')}`;
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={22} color="#ffffff" />
+          </TouchableOpacity>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.headerClinic}>{clinicName}</Text>
+            <Text style={styles.headerSubtitle}>Choose a date — spots update in real time</Text>
+          </View>
+        </View>
+
+        {/* Calendar card */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4f46e5" />
+            <Text style={styles.loadingText}>Loading calendar...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchAvailableDates}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.calendarCard}>
+            <Calendar
+              // Calendar customization
+              markedDates={markedDates}
+              onDayPress={handleDateSelect}
+              hideExtraDays={true}
+              enableSwipeMonths={true}
+              // Theme customization
+              theme={{
+                selectedDayBackgroundColor: '#2563EB',
+                todayTextColor: '#2563EB',
+                arrowColor: '#4f46e5',
+                dotColor: '#34D399',
+                textDayFontWeight: '600',
+                textMonthFontWeight: '700',
+                textDayHeaderFontWeight: '600',
+                monthTextColor: '#111827'
+              }}
+              style={styles.calendar}
+            />
+
+            {/* Legend */}
+            <View style={styles.legendContainer}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#34D399' }]} />
+                <Text style={styles.legendText}>Available</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#2563EB' }]} />
+                <Text style={styles.legendText}>Selected</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                <Text style={styles.legendText}>Closed</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Time slots */}
+        {selectedDate && (
+          <View style={styles.timeSlotsContainer}>
+            <View style={styles.dateRow}>
+              <Text style={styles.dateTitle}>{formatDateDisplay(selectedDate)}</Text>
+              <View style={styles.badges}>
+                {/* Calculate available slots by checking which slots are not booked */}
+                {(() => {
+                  // Helper function to check if a slot is available
+                  const isSlotAvailable = (slot: TimeSlot) => {
+                    return !slot.isBooked && 
+                      slot.status !== 'booked' && 
+                      ((slot as any).available !== false) && 
+                      ((slot as any).availability !== false);
+                  };
+                  
+                  // Count available slots
+                  const availableCount = timeSlots.filter(isSlotAvailable).length;
+                  const hasAvailableSlots = availableCount > 0;
+                  
+                  return (
+                    <View style={[
+                      styles.badge,
+                      hasAvailableSlots && styles.badgeAvailable
+                    ]}>
+                      <Text style={[
+                        styles.badgeNumber,
+                        hasAvailableSlots && styles.badgeAvailableText
+                      ]}>
+                        {timeSlots.length > 0 
+                          ? availableCount 
+                          : availabilityInfo.availableSlots}
+                      </Text>
+                      <Text style={[
+                        styles.badgeLabel,
+                        hasAvailableSlots && styles.badgeAvailableLabelText
+                      ]}>open</Text>
+                    </View>
+                  );
+                })()}
+                {/* 
+                  Calculate actual booked count directly from time slots 
+                  This ensures we always show booked slots even if API count is wrong
+                */}
+                <View style={[
+                  styles.badge, 
+                  styles.badgeMuted,
+                  (availabilityInfo.bookedSlots > 0 || 
+                   timeSlots.some(slot => slot.isBooked || slot.status === 'booked')) && styles.badgeActive
+                ]}>
+                  <Text style={[
+                    styles.badgeNumber,
+                    (availabilityInfo.bookedSlots > 0 || 
+                     timeSlots.some(slot => slot.isBooked || slot.status === 'booked')) && styles.badgeActiveText
+                  ]}>
+                    {availabilityInfo.bookedSlots || 
+                     timeSlots.filter(slot => slot.isBooked || slot.status === 'booked').length}
+                  </Text>
+                  <Text style={[
+                    styles.badgeLabel,
+                    (availabilityInfo.bookedSlots > 0 || 
+                     timeSlots.some(slot => slot.isBooked || slot.status === 'booked')) && styles.badgeActiveLabelText
+                  ]}>booked</Text>
+                </View>
+              </View>
+            </View>
+
+            {isLoadingSlots ? (
+              <View style={styles.loadingSlotsContainer}>
+                <ActivityIndicator size="small" color="#4f46e5" />
+                <Text style={styles.loadingText}>Loading available slots...</Text>
+              </View>
+            ) : timeSlots.length === 0 ? (
+              <Text style={styles.noSlotsText}>
+                No available time slots for this date. Please select another date.
+              </Text>
+            ) : (
+              <View style={styles.slotsList}>
+                {/* We'll use useEffect for debug logging instead */}
+                {timeSlots.map((slot, index) => {
+                  // Check for booking status in multiple ways to be thorough
+                  const isBooked = 
+                    slot.isBooked === true || 
+                    slot.status === 'booked' || 
+                    ((slot as any).bookings && (slot as any).bookings > 0) ||
+                    ((slot as any).appointment_count && (slot as any).appointment_count > 0) ||
+                    ((slot as any).available === false) ||
+                    ((slot as any).availability === false);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.slotItem,
+                        isBooked && styles.bookedSlotItem
+                      ]}
+                      onPress={() => !isBooked && handleTimeSlotSelect(slot)}
+                      disabled={isBooked}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.slotLeft, isBooked && styles.bookedLeft]}>
+                        <Ionicons
+                          name={isBooked ? "close" : "time-outline"}
+                          size={18}
+                          color={isBooked ? '#FFFFFF' : '#4f46e5'}
+                        />
+                      </View>
+
+                      <View style={styles.slotMiddle}>
+                        <Text style={[styles.slotText, isBooked && styles.bookedSlotText]}>
+                          {slot.display_time}
+                        </Text>
+                        {isBooked ? (
+                          <Text style={styles.slotSubText}>Already booked</Text>
+                        ) : (
+                          <Text style={styles.slotSubText}>Tap to continue</Text>
+                        )}
+                      </View>
+
+                      <View style={styles.slotRight}>
+                        {!isBooked ? (
+                          <View style={styles.chevronCircle}>
+                            <Ionicons name="chevron-forward" size={18} color="#ffffff" />
+                          </View>
+                        ) : (
+                          <Ionicons name="lock-closed-outline" size={18} color="#e53935" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoTitle}>Booking Information</Text>
+          <View style={styles.infoItem}>
+            <Ionicons name="information-circle-outline" size={20} color="#4f46e5" />
+            <Text style={styles.infoText}>
+              Green dots show dates that currently have open appointment slots.
+            </Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Ionicons name="calendar-outline" size={20} color="#4f46e5" />
+            <Text style={styles.infoText}>
+              Select a date and then pick a time slot to proceed.
+            </Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Ionicons name="time-outline" size={20} color="#4f46e5" />
+            <Text style={styles.infoText}>
+              Booked slots are shown as "Already booked" and are disabled.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F3F4F6'
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#4f46e5',
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)'
+  },
+  headerTextWrap: {
+    flex: 1,
+  },
+  headerClinic: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    marginTop: 2
+  },
+
+  /* Calendar card */
+  calendarCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  calendar: {
+    borderRadius: 8,
+  },
+
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6'
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center'
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#374151',
+  },
+
+  loadingContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#6B7280',
+    fontSize: 13,
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#111827',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+  },
+
+  /* Time slots */
+  timeSlotsContainer: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16
+  },
+  dateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1
+  },
+
+  badges: {
+    flexDirection: 'row',
+    marginLeft: 12
+  },
+  badge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+  },
+  badgeMuted: {
+    backgroundColor: '#FEE2E2'
+  },
+  badgeActive: {
+    backgroundColor: '#DC2626', // Brighter red
+    borderWidth: 0,
+    borderRadius: 20,
+    // Enhanced shadow to make it really stand out
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  badgeNumber: {
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#0f172a'
+  },
+  badgeActiveText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  badgeAvailable: {
+    backgroundColor: '#10B981', // Green for available
+    borderWidth: 0,
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  badgeAvailableText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  badgeLabel: {
+    fontSize: 10,
+    color: '#374151',
+    marginTop: 2
+  },
+  badgeActiveLabelText: {
+    color: '#ffffff',
+    fontWeight: '500'
+  },
+  badgeAvailableLabelText: {
+    color: '#ffffff',
+    fontWeight: '500'
+  },
+
+  loadingSlotsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+
+  noSlotsText: {
+    color: '#6B7280',
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 18,
+  },
+
+  slotsList: {
+    marginTop: 12,
+  },
+  slotItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    backgroundColor: '#F8FAFF',
+    borderRadius: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4f46e5',
+  },
+  slotLeft: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E9F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12
+  },
+  bookedLeft: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444'
+  },
+  slotMiddle: {
+    flex: 1,
+  },
+  slotText: {
+    fontSize: 16,
+    color: '#0f172a',
+    fontWeight: '600'
+  },
+  slotSubText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2
+  },
+  slotRight: {
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  chevronCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#4f46e5',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  bookedSlotItem: {
+    borderLeftColor: '#EF4444',
+    backgroundColor: '#FFF1F2',
+    opacity: 0.95,
+  },
+  bookedSlotText: {
+    color: '#9B1C1C',
+  },
+
+  /* Info container */
+  infoContainer: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 28,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 10,
+    flex: 1,
+  },
+});
+
+export default ClinicCalendarScreen;

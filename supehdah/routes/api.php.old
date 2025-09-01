@@ -1,0 +1,83 @@
+<?php
+
+use App\Http\Controllers\API\AppointmentApiController;
+use App\Http\Controllers\API\AvailabilityApiController;
+use App\Http\Controllers\API\CustomFieldApiController;
+use App\Http\Controllers\API\ClinicStatusController;
+use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\MeController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
+
+// Debug test route
+Route::get('/test', function() {
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'API is working',
+        'timestamp' => now()->toDateTimeString()
+    ]);
+});
+
+// Auth routes
+Route::post('/register', [App\Http\Controllers\API\AuthController::class, 'register']);
+Route::post('/login', [App\Http\Controllers\API\AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [App\Http\Controllers\API\AuthController::class, 'user']);
+    Route::post('/logout', [App\Http\Controllers\API\AuthController::class, 'logout']);
+    Route::put('/update-profile', [App\Http\Controllers\API\AuthController::class, 'updateProfile']);
+});
+
+// Clinic routes
+Route::get('/clinics', [App\Http\Controllers\API\ClinicController::class, 'index']);
+Route::get('/clinic-status/{id}', [ClinicStatusController::class, 'getStatus']);
+Route::get('/clinics/{clinic}/gallery', [App\Http\Controllers\API\ClinicGalleryController::class, 'index']);
+Route::get('/clinics/{clinic}/homepage', [App\Http\Controllers\API\ClinicHomepageController::class, 'show']);
+
+// Fields and custom fields routes
+Route::get('/clinics/{clinic}/fields', [App\Http\Controllers\API\ClinicFieldController::class, 'index']);
+Route::get('/clinics/{clinicId}/custom-fields', [CustomFieldApiController::class, 'getCustomFields']);
+
+// Appointment routes
+Route::post('/clinics/{clinicId}/appointments', [AppointmentApiController::class, 'store']);
+Route::get('/clinics/{clinicId}/appointments', [AppointmentApiController::class, 'index']);
+Route::get('/clinics/{clinicId}/appointments/{id}', [AppointmentApiController::class, 'show']);
+Route::put('/clinics/{clinicId}/appointments/{id}/status', [AppointmentApiController::class, 'updateStatus']);
+
+// Availability API routes
+Route::get('/clinics/{clinicId}/availability/settings', [AvailabilityApiController::class, 'getSettings']);
+Route::get('/clinics/{clinicId}/availability/schedule/{dayOfWeek}', [AvailabilityApiController::class, 'getDailySchedule']);
+Route::get('/clinics/{clinicId}/availability/breaks', [AvailabilityApiController::class, 'getBreaks']);
+Route::get('/clinics/{clinicId}/availability/special-dates', [AvailabilityApiController::class, 'getSpecialDates']);
+Route::get('/clinics/{clinicId}/availability/slots/{date}', [AvailabilityApiController::class, 'getAvailableSlots']);
+
+// Profile routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/me', [App\Http\Controllers\API\ProfileController::class, 'show']);
+    Route::put('/me', [App\Http\Controllers\API\ProfileController::class, 'update']);
+    Route::put('/user', [UserController::class, 'update']);
+});
+
+// Pet API routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/pets', [App\Http\Controllers\API\PetApiController::class, 'index']);
+    Route::post('/pets', [App\Http\Controllers\API\PetApiController::class, 'store']);
+    Route::get('/pets/{id}', [App\Http\Controllers\API\PetApiController::class, 'show']);
+    Route::put('/pets/{id}', [App\Http\Controllers\API\PetApiController::class, 'update']);
+    Route::delete('/pets/{id}', [App\Http\Controllers\API\PetApiController::class, 'destroy']);
+    
+    // Pet vaccination routes
+    Route::post('/pets/{id}/vaccinations', [App\Http\Controllers\API\PetApiController::class, 'storeVaccination']);
+    Route::get('/pets/{id}/vaccinations', [App\Http\Controllers\API\PetApiController::class, 'getVaccinations']);
+});

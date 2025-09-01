@@ -1,0 +1,34 @@
+# Laravel
+/supehdah/vendor/
+/supehdah/node_modules/
+/supehdah/public/hot
+/supehdah/public/storage
+/supehdah/storage/*.key
+/supehdah/.env
+/supehdah/.env.backup
+/supehdah/.phpunit.result.cache
+/supehdah/Homestead.json
+/supehdah/Homestead.yaml
+/supehdah/npm-debug.log
+/supehdah/yarn-error.log
+
+# React Native
+/supehdah_mobile/node_modules/
+/supehdah_mobile/.expo/
+/supehdah_mobile/dist/
+/supehdah_mobile/npm-debug.*
+/supehdah_mobile/*.jks
+/supehdah_mobile/*.p8
+/supehdah_mobile/*.p12
+/supehdah_mobile/*.key
+/supehdah_mobile/*.mobileprovision
+/supehdah_mobile/*.orig.*
+/supehdah_mobile/web-build/
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
