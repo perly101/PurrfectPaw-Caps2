@@ -1,11 +1,16 @@
-@extends('admin.layouts.app')
+<x-app-layout>
+    <div class="flex min-h-screen bg-gray-100">
+        {{-- Sidebar (direct include) --}}
+        @include('admin.components.sidebar')
 
-@section('content')
-
-<div class="container px-6 mx-auto grid">
-    <h2 class="my-6 text-2xl font-semibold text-gray-700">
-        Application Settings
-    </h2>
+        {{-- Main Content --}}
+        <div class="flex-1 p-6 ml-64">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Application Settings</h2>
+                    <p class="text-gray-500 text-sm mt-1">Configure your application settings</p>
+                </div>
+            </div>
     
     <!-- Session Message -->
     @if(session('success'))
@@ -15,33 +20,33 @@
     @endif
     
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b">
+        <div class="px-4 sm:px-6 py-4 bg-gray-50 border-b">
             <h3 class="text-lg font-semibold text-gray-700">Settings Management</h3>
         </div>
         
         <!-- Tabs -->
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex">
-                <a id="tab-general" href="#general" class="tab-link tab-active py-4 px-6 border-b-2 font-medium text-sm">
+        <div class="border-b border-gray-200 overflow-x-auto">
+            <nav class="-mb-px flex flex-nowrap">
+                <a id="tab-general" href="#general" class="tab-link tab-active py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap">
                     General Settings
                 </a>
-                <a id="tab-email" href="#email" class="tab-link py-4 px-6 border-b-2 font-medium text-sm">
+                <a id="tab-email" href="#email" class="tab-link py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap">
                     Email Configuration
                 </a>
-                <a id="tab-appearance" href="#appearance" class="tab-link py-4 px-6 border-b-2 font-medium text-sm">
+                <a id="tab-appearance" href="#appearance" class="tab-link py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap">
                     Appearance
                 </a>
-                <a id="tab-security" href="#security" class="tab-link py-4 px-6 border-b-2 font-medium text-sm">
+                <a id="tab-security" href="#security" class="tab-link py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap">
                     Security
                 </a>
-                <a id="tab-admin" href="{{ route('admin.settings') }}" class="tab-link py-4 px-6 border-b-2 font-medium text-sm">
+                <a id="tab-admin" href="{{ route('admin.settings') }}" class="tab-link py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap">
                     Admin Account
                 </a>
             </nav>
         </div>
         
         <!-- Tab Content -->
-        <div class="p-6">
+        <div class="p-3 sm:p-6">
             <!-- General Settings -->
             <div id="general" class="tab-content block">
                 <form action="{{ route('admin.settings.general') }}" method="POST" class="space-y-6">
@@ -336,61 +341,60 @@
             </div>
         </div>
     </div>
-</div>
-@endsection
+        </div>
+    </div>
 
-@section('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const tabLinks = document.querySelectorAll('.tab-link');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        // Handle tab switching
-        tabLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Remove active class from all tabs
-                tabLinks.forEach(tab => {
-                    tab.classList.remove('tab-active');
-                    tab.classList.remove('border-indigo-500');
-                    tab.classList.remove('text-indigo-600');
-                    tab.classList.add('border-transparent');
-                    tab.classList.add('text-gray-500');
-                    tab.classList.add('hover:text-gray-700');
-                    tab.classList.add('hover:border-gray-300');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Handle tab switching
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all tabs
+                    tabLinks.forEach(tab => {
+                        tab.classList.remove('tab-active');
+                        tab.classList.remove('border-indigo-500');
+                        tab.classList.remove('text-indigo-600');
+                        tab.classList.add('border-transparent');
+                        tab.classList.add('text-gray-500');
+                        tab.classList.add('hover:text-gray-700');
+                        tab.classList.add('hover:border-gray-300');
+                    });
+                    
+                    // Hide all tab contents
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                        content.classList.remove('block');
+                    });
+                    
+                    // Add active class to current tab
+                    this.classList.add('tab-active');
+                    this.classList.add('border-indigo-500');
+                    this.classList.add('text-indigo-600');
+                    this.classList.remove('border-transparent');
+                    this.classList.remove('text-gray-500');
+                    this.classList.remove('hover:text-gray-700');
+                    this.classList.remove('hover:border-gray-300');
+                    
+                    // Show current tab content
+                    const tabId = this.getAttribute('href').substring(1);
+                    document.getElementById(tabId).classList.remove('hidden');
+                    document.getElementById(tabId).classList.add('block');
+                    
+                    // Save active tab to localStorage
+                    localStorage.setItem('activeSettingsTab', tabId);
                 });
-                
-                // Hide all tab contents
-                tabContents.forEach(content => {
-                    content.classList.add('hidden');
-                    content.classList.remove('block');
-                });
-                
-                // Add active class to current tab
-                this.classList.add('tab-active');
-                this.classList.add('border-indigo-500');
-                this.classList.add('text-indigo-600');
-                this.classList.remove('border-transparent');
-                this.classList.remove('text-gray-500');
-                this.classList.remove('hover:text-gray-700');
-                this.classList.remove('hover:border-gray-300');
-                
-                // Show current tab content
-                const tabId = this.getAttribute('href').substring(1);
-                document.getElementById(tabId).classList.remove('hidden');
-                document.getElementById(tabId).classList.add('block');
-                
-                // Save active tab to localStorage
-                localStorage.setItem('activeSettingsTab', tabId);
             });
+            
+            // Restore active tab from localStorage
+            const activeTab = localStorage.getItem('activeSettingsTab');
+            if (activeTab) {
+                document.querySelector(`a[href="#${activeTab}"]`)?.click();
+            }
         });
-        
-        // Restore active tab from localStorage
-        const activeTab = localStorage.getItem('activeSettingsTab');
-        if (activeTab) {
-            document.querySelector(`a[href="#${activeTab}"]`)?.click();
-        }
-    });
-</script>
-@endsection
+    </script>
+</x-app-layout>

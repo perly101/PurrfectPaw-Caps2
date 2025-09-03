@@ -47,6 +47,12 @@ class AdminController extends Controller
             $query->where('role', 'clinic');
         } elseif ($category === 'admin') {
             $query->where('role', 'admin');
+        } elseif ($category === 'doctor') {
+            $query->where('role', 'doctor');
+            // Eager load the doctor profile with clinic info
+            $query->with(['doctorProfile' => function($query) {
+                $query->with('clinic:id,clinic_name,address,contact_number');
+            }]);
         } elseif ($category === 'users') {
             $query->where('role', 'user');
         }
@@ -461,6 +467,8 @@ public function exportUsers(Request $request)
         $query->where('role', 'user');
     } elseif ($category === 'admin') {
         $query->where('role', 'admin');
+    } elseif ($category === 'doctor') {
+        $query->where('role', 'doctor');
     } elseif ($category === 'clinic') {
         $query->where('role', 'clinic');
     }

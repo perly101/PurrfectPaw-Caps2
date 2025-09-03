@@ -66,6 +66,11 @@ public function clinicInfo()
     return $this->hasOne(ClinicInfo::class, 'user_id');
 }
 
+public function doctorProfile()
+{
+    return $this->hasOne(Doctor::class, 'user_id');
+}
+
 public function pets()
 {
     return $this->hasMany(Pet::class);

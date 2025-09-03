@@ -52,6 +52,10 @@
                        class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'clinic' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Clinic
                     </a>
+                    <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'doctor'])) }}"
+                       class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'doctor' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                        Doctor
+                    </a>
                     <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'admin'])) }}"
                        class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'admin' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Admin
@@ -120,6 +124,9 @@
                                     <th class="px-6 py-3 text-left">Email</th>
                                     <th class="px-6 py-3 text-left">Phone</th>
                                     <th class="px-6 py-3 text-left">Role</th>
+                                    @if(request('category') == 'doctor')
+                                    <th class="px-6 py-3 text-left">Clinic</th>
+                                    @endif
                                     <th class="px-6 py-3 text-left">Registered At</th>
                                     <th class="px-6 py-3 text-center">Actions</th>
                                 </tr>
@@ -144,10 +151,28 @@
                                                 <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">Admin</span>
                                             @elseif($user->role == 'clinic')
                                                 <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Clinic Staff</span>
+                                            @elseif($user->role == 'doctor')
+                                                <span class="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">Doctor</span>
                                             @else
                                                 <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">User</span>
                                             @endif
                                         </td>
+                                        @if(request('category') == 'doctor')
+                                        <td class="px-6 py-4">
+                                            @php
+                                                $doctorProfile = $user->doctorProfile;
+                                                $clinic = $doctorProfile ? $doctorProfile->clinic : null;
+                                            @endphp
+                                            
+                                            @if($clinic)
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">{{ $clinic->clinic_name }}</span>
+                                            @elseif($doctorProfile)
+                                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">Has Profile, No Clinic</span>
+                                            @else
+                                                <span class="text-gray-500 italic">Not assigned</span>
+                                            @endif
+                                        </td>
+                                        @endif
                                         <td class="px-6 py-4 text-gray-500">{{ $user->created_at->format('M d, Y') }}</td>
                                         <td class="px-6 py-4 flex items-center justify-center space-x-2">
                                             <!-- Edit Button -->
@@ -253,6 +278,7 @@
                                                     <select name="role" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
                                                         <option value="user" {{ $user->role == 'user' ? 'selected' : '' }}>User</option>
                                                         <option value="clinic" {{ $user->role == 'clinic' ? 'selected' : '' }}>Clinic Staff</option>
+                                                        <option value="doctor" {{ $user->role == 'doctor' ? 'selected' : '' }}>Doctor</option>
                                                         <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
                                                     </select>
                                                 </div>
@@ -280,12 +306,14 @@
                                     </div>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    <td colspan="{{ request('category') == 'doctor' ? 8 : 7 }}" class="px-6 py-4 text-center text-gray-500">
                                         @if(request('search'))
                                             @if($category == 'clinic')
                                                 No clinic accounts found matching "{{ request('search') }}".
                                             @elseif($category == 'admin')
                                                 No admin accounts found matching "{{ request('search') }}".
+                                            @elseif($category == 'doctor')
+                                                No doctor accounts found matching "{{ request('search') }}".
                                             @else
                                                 No user accounts found matching "{{ request('search') }}".
                                             @endif
@@ -294,6 +322,8 @@
                                                 No clinic accounts found.
                                             @elseif($category == 'admin')
                                                 No admin accounts found.
+                                            @elseif($category == 'doctor')
+                                                No doctor accounts found.
                                             @else
                                                 No user accounts found.
                                             @endif
@@ -462,9 +492,9 @@
                     return;
                 }
                 
-                const newRole = prompt('Change selected users to role (user, clinic, admin):');
+                const newRole = prompt('Change selected users to role (user, clinic, doctor, admin):');
                 
-                if (newRole && ['user', 'clinic', 'admin'].includes(newRole)) {
+                if (newRole && ['user', 'clinic', 'doctor', 'admin'].includes(newRole)) {
                     // Collect all selected user IDs
                     const selectedUserIds = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(checkbox => checkbox.value);
                     
@@ -487,7 +517,7 @@
                     document.getElementById('newRoleValue').value = newRole;
                     document.getElementById('bulkActionForm').submit();
                 } else if (newRole) {
-                    alert('Invalid role. Please use user, clinic, or admin.');
+                    alert('Invalid role. Please use user, clinic, doctor, or admin.');
                 }
             });
             

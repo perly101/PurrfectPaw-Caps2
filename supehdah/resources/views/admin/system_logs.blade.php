@@ -1,15 +1,20 @@
-@extends('admin.layouts.app')
+<x-app-layout>
+    <div class="flex min-h-screen bg-gray-100">
+        {{-- Sidebar (direct include) --}}
+        @include('admin.components.sidebar')
 
-@section('content')
-<div class="container px-6 mx-auto grid">
+        {{-- Main Content --}}
+        <div class="flex-1 p-6 ml-64">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-800">System Logs</h2>
+                    <p class="text-gray-500 text-sm mt-1">View and manage system activity logs</p>
+                </div>
+            </div>
     
-    <h2 class="my-6 text-2xl font-semibold text-gray-700">
-        System Logs
-    </h2>
-    
-    <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center space-x-4">
-            <form action="{{ route('admin.system-logs') }}" method="GET" class="flex items-center space-x-2">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div class="w-full md:w-auto">
+            <form action="{{ route('admin.system-logs') }}" method="GET" class="flex flex-col sm:flex-row flex-wrap gap-2">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search logs..." 
                     class="px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
                 
@@ -21,21 +26,25 @@
                     <option value="info" {{ request('status') == 'info' ? 'selected' : '' }}>Info</option>
                 </select>
                 
-                <input type="date" name="date_from" value="{{ request('date_from') }}" 
-                    class="px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                <input type="date" name="date_to" value="{{ request('date_to') }}" 
-                    class="px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <div class="flex flex-row gap-2">
+                    <input type="date" name="date_from" value="{{ request('date_from') }}" 
+                        class="px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <input type="date" name="date_to" value="{{ request('date_to') }}" 
+                        class="px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
                 
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
-                    Filter
-                </button>
-                <a href="{{ route('admin.system-logs') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">
-                    Reset
-                </a>
+                <div class="flex gap-2">
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                        Filter
+                    </button>
+                    <a href="{{ route('admin.system-logs') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">
+                        Reset
+                    </a>
+                </div>
             </form>
         </div>
         
-        <div class="flex space-x-2">
+        <div class="flex gap-2 w-full sm:w-auto justify-end">
             <a href="{{ route('admin.system-logs.export', request()->all()) }}" class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
                 Export CSV
             </a>
@@ -62,7 +71,7 @@
     <!-- Logs Table -->
     <div class="w-full overflow-hidden rounded-lg shadow-md">
         <div class="w-full overflow-x-auto">
-            <table class="w-full whitespace-nowrap">
+            <table class="w-full whitespace-nowrap text-xs sm:text-sm">
                 <thead>
                     <tr class="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
                         <th class="px-4 py-3">Action</th>
@@ -137,28 +146,25 @@
             {{ $logs->links() }}
         </div>
     </div>
-</div>
-
-<!-- Details Modal -->
-<div id="details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl">
-        <div class="px-6 py-4 border-b">
-            <h3 class="text-lg font-semibold text-gray-700">Log Details</h3>
-        </div>
-        <div class="p-6">
-            <pre id="details-content" class="bg-gray-100 p-4 rounded-lg text-sm overflow-auto max-h-80"></pre>
-        </div>
-        <div class="px-6 py-3 border-t flex justify-end">
-            <button id="close-modal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-                Close
-            </button>
         </div>
     </div>
-</div>
 
-@endsection
-
-@section('scripts')
+    <!-- Details Modal -->
+    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center hidden p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+            <div class="px-4 sm:px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-700">Log Details</h3>
+            </div>
+            <div class="p-6">
+                <pre id="details-content" class="bg-gray-100 p-4 rounded-lg text-sm overflow-auto max-h-80"></pre>
+            </div>
+            <div class="px-6 py-3 border-t flex justify-end">
+                <button id="close-modal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // View details modal
@@ -172,19 +178,22 @@
                 const details = JSON.parse(this.dataset.details);
                 detailsContent.textContent = JSON.stringify(details, null, 2);
                 modal.classList.remove('hidden');
+                modal.style.display = 'flex';
             });
         });
         
         // Close modal when clicking the close button or outside the modal
         closeModalBtn.addEventListener('click', function() {
             modal.classList.add('hidden');
+            modal.style.display = 'none';
         });
         
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
                 modal.classList.add('hidden');
+                modal.style.display = 'none';
             }
         });
     });
 </script>
-@endsection
+</x-app-layout>
