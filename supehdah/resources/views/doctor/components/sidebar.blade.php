@@ -62,7 +62,7 @@
             <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-0.5 rounded-full shadow-lg">
                 <div class="bg-gradient-to-b from-[#111827] to-[#1E3A8A] p-1.5 rounded-full">
                     @if($doctor->photo)
-                        <img src="{{ asset('storage/doctor_photos/' . $doctor->photo) }}" alt="{{ $doctor->first_name }}" class="rounded-full object-cover shadow-inner" style="width: 46px; height: 46px;">
+                        <img src="{{ asset('storage/' . $doctor->photo) }}" alt="{{ $doctor->first_name }}" class="rounded-full object-cover shadow-inner" style="width: 46px; height: 46px;">
                     @else
                         <div class="rounded-full flex items-center justify-center bg-blue-900 shadow-inner" style="width: 46px; height: 46px;">
                             <span class="text-lg font-bold text-blue-300">{{ substr($doctor->first_name, 0, 1) . substr($doctor->last_name, 0, 1) }}</span>

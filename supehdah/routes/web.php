@@ -14,6 +14,7 @@ use App\Http\Controllers\Clinic\SettingsController;
 use App\Http\Controllers\User\PetController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SystemLogController;
+use App\Http\Controllers\EmailTestController;
 use App\Http\Controllers\Doctor\DashboardController as DoctorDashboardController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Doctor\PatientController as DoctorPatientController;
@@ -67,6 +68,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/application-settings/email', [SettingController::class, 'updateEmail'])->name('admin.settings.email');
     Route::post('/admin/application-settings/appearance', [SettingController::class, 'updateAppearance'])->name('admin.settings.appearance');
     Route::post('/admin/application-settings/security', [SettingController::class, 'updateSecurity'])->name('admin.settings.security');
+    
+    // Email test endpoint
+    Route::get('/admin/test-email', [EmailTestController::class, 'testEmail'])->name('admin.test.email');
     
     // System Logs
     Route::get('/admin/system-logs', [SystemLogController::class, 'index'])->name('admin.system-logs');

@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'Laravel') }}</title>
@@ -12,6 +12,9 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="{{ mix('css/app.css') }}">
+    
+    <!-- Custom Responsive CSS -->
+    <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
 
     <!-- Scripts -->
     <script src="{{ mix('js/app.js') }}" defer></script>
@@ -21,6 +24,30 @@
     
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Additional Responsive Styles -->
+    <style>
+        @media (max-width: 768px) {
+            .md\:hidden-custom {
+                display: none !important;
+            }
+            .md\:block-custom {
+                display: block !important;
+            }
+            .md\:flex-col-custom {
+                flex-direction: column !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .sm\:px-4-custom {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .sm\:text-sm-custom {
+                font-size: 0.875rem !important;
+            }
+        }
+    </style>
 </head>
 <body class="font-sans antialiased">
     <div class="min-h-screen bg-gray-100">

@@ -26,7 +26,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -74,6 +74,14 @@ public function doctorProfile()
 public function pets()
 {
     return $this->hasMany(Pet::class);
+}
+
+/**
+ * Get the OTP verification code associated with the user.
+ */
+public function verificationOtp()
+{
+    return $this->hasOne(EmailVerificationOtp::class);
 }
 
 }

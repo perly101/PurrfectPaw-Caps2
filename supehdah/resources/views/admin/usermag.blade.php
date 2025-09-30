@@ -1,37 +1,51 @@
 <x-app-layout>
-    <div class="flex min-h-screen bg-gray-100">
-        {{-- Sidebar (direct include) --}}
-        @include('admin.components.sidebar')
+    {{-- Include mobil                                <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg flex items-center text-xs md:text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-0 md:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span class="hidden md:inline">Export</span>
+                                </button>
+                                <div id="headerExportDropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border border-gray-200">ation component --}}
+    @include('admin.components.mobile-nav')
+    
+    <div class="flex flex-col md:flex-row min-h-screen bg-gray-100">
+        {{-- Sidebar (hidden on mobile) --}}
+        <div class="hidden md:block">
+            @include('admin.components.sidebar')
+        </div>
 
         {{-- Main Content --}}
-        <div class="flex-1 p-6 ml-64">
-            <div class="bg-white shadow rounded-lg p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">User Management</h2>
+        <div class="flex-1 p-4 md:p-6 md:ml-64 mt-12 md:mt-0">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <div class="mb-4 md:mb-0">
+                    <h2 class="text-xl md:text-2xl font-semibold text-gray-800">User Management</h2>
+                    <p class="text-gray-500 text-sm mt-1">Manage and monitor all system users</p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <form action="{{ route('admin.usermag') }}" method="GET" class="flex flex-1 md:flex-auto">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search users..." 
+                            class="border border-gray-300 rounded-l-lg px-2 md:px-4 py-2 focus:ring focus:ring-blue-200 focus:border-blue-400 text-sm md:text-base w-full" />
+                        <button type="submit" class="bg-blue-500 text-white px-3 md:px-4 py-2 rounded-r-lg hover:bg-blue-600 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </button>
+                    </form>
                     
-                    <div class="flex items-center space-x-2">
-                        <form action="{{ route('admin.usermag') }}" method="GET" class="flex">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search users..." 
-                                class="border border-gray-300 rounded-l-lg px-4 py-2 focus:ring focus:ring-blue-200 focus:border-blue-400 w-64" />
-                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r-lg hover:bg-blue-600 transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </button>
-                        </form>
-                        
+                    <div class="flex items-center gap-2">
                         <a href="{{ route('admin.usermag') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg transition">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         </a>
                         
-                        <div class="dropdown relative ml-2">
-                            <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="dropdown relative">
+                            <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg flex items-center text-xs md:text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-0 md:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                Export
+                                <span class="hidden md:inline">Export</span>
                             </button>
                             <div id="exportDropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
                                 <a href="{{ route('admin.users.export', ['format' => 'csv', 'category' => request('category', 'users')]) }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">
@@ -41,23 +55,25 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
+            <div class="bg-white shadow rounded-lg p-4 md:p-6">
                 <!-- Category Filter -->
-                <div class="mb-4 flex space-x-2">
+                <div class="mb-4 flex flex-wrap gap-2">
                     <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'users'])) }}"
-                       class="px-4 py-2 rounded-lg font-semibold transition {{ request('category', 'users') == 'users' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                       class="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium md:font-semibold transition {{ request('category', 'users') == 'users' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Users
                     </a>
                     <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'clinic'])) }}"
-                       class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'clinic' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                       class="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium md:font-semibold transition {{ request('category') == 'clinic' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Clinic
                     </a>
                     <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'doctor'])) }}"
-                       class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'doctor' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                       class="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium md:font-semibold transition {{ request('category') == 'doctor' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Doctor
                     </a>
                     <a href="{{ route('admin.usermag', array_merge(request()->except('category'), ['category' => 'admin'])) }}"
-                       class="px-4 py-2 rounded-lg font-semibold transition {{ request('category') == 'admin' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                       class="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium md:font-semibold transition {{ request('category') == 'admin' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                         Admin
                     </a>
                 </div>
@@ -75,21 +91,23 @@
                 @endif
 
                 <!-- Bulk Actions -->
-                <div class="mb-4 flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <button id="selectAllBtn" type="button" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg">
-                            Select All
+                <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="selectAllBtn" type="button" class="text-xs md:text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-1.5 md:py-2 px-3 md:px-4 rounded-lg">
+                            <span class="hidden sm:inline">Select All</span>
+                            <span class="sm:hidden">Select</span>
                         </button>
-                        <button id="deselectAllBtn" type="button" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg">
-                            Deselect All
+                        <button id="deselectAllBtn" type="button" class="text-xs md:text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-1.5 md:py-2 px-3 md:px-4 rounded-lg">
+                            <span class="hidden sm:inline">Deselect All</span>
+                            <span class="sm:hidden">Deselect</span>
                         </button>
                     </div>
                     
-                    <div class="bulk-actions hidden items-center space-x-2" id="bulkActionsContainer">
-                        <span id="selectedCount" class="text-sm font-medium text-gray-700">0 users selected</span>
+                    <div class="bulk-actions hidden items-center gap-2" id="bulkActionsContainer">
+                        <span id="selectedCount" class="text-xs md:text-sm font-medium text-gray-700">0 users selected</span>
                         
                         <div class="dropdown relative">
-                            <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm">
                                 Bulk Actions
                             </button>
                             <div id="bulkActionsDropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
@@ -110,43 +128,46 @@
                     <input type="hidden" name="new_role" id="newRoleValue" value="">
                 </form>
                 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-100 text-gray-700 text-sm uppercase tracking-wide">
+                <div class="overflow-x-auto responsive-table-container">
+                    <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden responsive-table">
+                            <thead class="bg-gray-100 text-gray-700 text-xs md:text-sm uppercase tracking-wide">
                                 <tr>
-                                    <th class="px-4 py-3 w-8">
+                                    <th class="px-2 md:px-4 py-2 md:py-3 w-8">
                                         <div class="flex items-center">
-                                            <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out">
+                                            <input type="checkbox" id="selectAll" class="form-checkbox h-3 md:h-4 w-3 md:w-4 text-blue-600 transition duration-150 ease-in-out">
                                         </div>
                                     </th>
-                                    <th class="px-6 py-3 text-left">#</th>
-                                    <th class="px-6 py-3 text-left">Full Name</th>
-                                    <th class="px-6 py-3 text-left">Email</th>
-                                    <th class="px-6 py-3 text-left">Phone</th>
-                                    <th class="px-6 py-3 text-left">Role</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left hidden sm:table-cell">#</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left">Full Name</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left hidden md:table-cell">Email</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left hidden lg:table-cell">Phone</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left">Role</th>
                                     @if(request('category') == 'doctor')
-                                    <th class="px-6 py-3 text-left">Clinic</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left hidden lg:table-cell">Clinic</th>
                                     @endif
-                                    <th class="px-6 py-3 text-left">Registered At</th>
-                                    <th class="px-6 py-3 text-center">Actions</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-left hidden md:table-cell">Registered</th>
+                                    <th class="px-2 md:px-6 py-2 md:py-3 text-center">Actions</th>
                                 </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 text-gray-700">
+                        <tbody class="divide-y divide-gray-200 text-gray-700 text-xs md:text-sm">
                             @php
                                 $category = request('category', 'users');
                             @endphp
                             @forelse ($users as $index => $user)
                                 <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-4">
+                                    <td class="px-2 md:px-4 py-2 md:py-4">
                                         <div class="flex items-center">
-                                            <input type="checkbox" name="selected_users[]" value="{{ $user->id }}" class="user-checkbox form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out">
+                                            <input type="checkbox" name="selected_users[]" value="{{ $user->id }}" class="user-checkbox form-checkbox h-3 md:h-4 w-3 md:w-4 text-blue-600 transition duration-150 ease-in-out">
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">{{ $index + 1 }}</td>
-                                        <td class="px-6 py-4 font-medium">{{ $user->first_name }} {{ $user->middle_name ? $user->middle_name . ' ' : '' }}{{ $user->last_name }}</td>
-                                        <td class="px-6 py-4">{{ $user->email }}</td>
-                                        <td class="px-6 py-4">{{ $user->phone_number ?? '—' }}</td>
-                                        <td class="px-6 py-4">
+                                    <td class="px-2 md:px-6 py-2 md:py-4 hidden sm:table-cell">{{ $index + 1 }}</td>
+                                        <td class="px-2 md:px-6 py-2 md:py-4 font-medium">
+                                            <div>{{ $user->first_name }} {{ $user->middle_name ? $user->middle_name . ' ' : '' }}{{ $user->last_name }}</div>
+                                            <div class="text-xs text-gray-500 md:hidden">{{ $user->email }}</div>
+                                        </td>
+                                        <td class="px-2 md:px-6 py-2 md:py-4 hidden md:table-cell">{{ $user->email }}</td>
+                                        <td class="px-2 md:px-6 py-2 md:py-4 hidden lg:table-cell">{{ $user->phone_number ?? '—' }}</td>
+                                        <td class="px-2 md:px-6 py-2 md:py-4">
                                             @if($user->role == 'admin')
                                                 <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">Admin</span>
                                             @elseif($user->role == 'clinic')
@@ -158,7 +179,7 @@
                                             @endif
                                         </td>
                                         @if(request('category') == 'doctor')
-                                        <td class="px-6 py-4">
+                                        <td class="px-2 md:px-6 py-2 md:py-4 hidden lg:table-cell">
                                             @php
                                                 $doctorProfile = $user->doctorProfile;
                                                 $clinic = $doctorProfile ? $doctorProfile->clinic : null;
@@ -173,12 +194,15 @@
                                             @endif
                                         </td>
                                         @endif
-                                        <td class="px-6 py-4 text-gray-500">{{ $user->created_at->format('M d, Y') }}</td>
-                                        <td class="px-6 py-4 flex items-center justify-center space-x-2">
+                                        <td class="px-2 md:px-6 py-2 md:py-4 text-gray-500 hidden md:table-cell">{{ $user->created_at->format('M d, Y') }}</td>
+                                        <td class="px-2 md:px-6 py-2 md:py-4 flex flex-wrap items-center justify-center gap-2">
                                             <!-- Edit Button -->
                                             <button type="button" onclick="openModal('editModal-{{ $user->id }}')"
-                                                class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg shadow">
-                                                Edit
+                                                class="bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2 rounded-lg shadow">
+                                                <span class="hidden sm:inline">Edit</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:hidden" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                </svg>
                                             </button>
 
                                             <!-- Delete Form -->
@@ -187,8 +211,11 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
-                                                    class="bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-lg shadow-md transition">
-                                                    Delete
+                                                    class="bg-red-600 hover:bg-red-500 text-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2 rounded-lg shadow-md transition">
+                                                    <span class="hidden sm:inline">Delete</span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:hidden" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                    </svg>
                                                 </button>
                                             </form>
                                         </td>
@@ -196,20 +223,20 @@
 
                                     <!-- Edit Modal -->
                                     <div id="editModal-{{ $user->id }}" 
-                                        class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50">
+                                        class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 p-3 md:p-0 overflow-y-auto">
 
                                         <!-- Draggable Modal -->
                                         <div id="draggable-{{ $user->id }}" 
-                                            class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative cursor-move"
-                                            style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);">
+                                            class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto p-4 md:p-6 relative cursor-move"
+                                            style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); max-height: 90vh; overflow-y: auto;">
 
                                             <!-- Close button -->
                                             <button onclick="closeModal('editModal-{{ $user->id }}')"
-                                                class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl">
+                                                class="absolute top-2 right-2 md:top-3 md:right-3 text-gray-400 hover:text-gray-600 text-xl md:text-2xl">
                                                 &times;
                                             </button>
 
-                                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Edit User</h2>
+                                            <h2 class="text-lg md:text-xl font-semibold text-gray-800 mb-3 md:mb-4">Edit User</h2>
 
                                             @if($errors->any())
                                             <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-4">
@@ -226,46 +253,46 @@
                                                 @csrf
                                                 @method('PUT')
 
-                                                <div class="grid grid-cols-3 gap-4">
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">First Name</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">First Name</label>
                                                         <input type="text" name="first_name" value="{{ $user->first_name }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Middle Name</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Middle Name</label>
                                                         <input type="text" name="middle_name" value="{{ $user->middle_name }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Last Name</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Last Name</label>
                                                         <input type="text" name="last_name" value="{{ $user->last_name }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                 </div>
 
-                                                <div class="grid grid-cols-2 gap-4">
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Email</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Email</label>
                                                         <input type="email" name="email" value="{{ $user->email }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Phone Number</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Phone Number</label>
                                                         <input type="text" name="phone_number" value="{{ $user->phone_number }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                 </div>
 
-                                                <div class="grid grid-cols-2 gap-4">
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Birthday</label>
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Birthday</label>
                                                         <input type="date" name="birthday" value="{{ $user->birthday }}"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                            class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     </div>
                                                     <div>
-                                                        <label class="block text-gray-600 mb-1">Gender</label>
-                                                        <select name="gender" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                        <label class="block text-gray-600 text-sm md:text-base mb-1">Gender</label>
+                                                        <select name="gender" class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                             <option value="male" {{ $user->gender == 'male' ? 'selected' : '' }}>Male</option>
                                                             <option value="female" {{ $user->gender == 'female' ? 'selected' : '' }}>Female</option>
                                                             <option value="prefer_not_say" {{ $user->gender == 'prefer_not_say' ? 'selected' : '' }}>Prefer not to say</option>
@@ -274,8 +301,8 @@
                                                 </div>
 
                                                 <div>
-                                                    <label class="block text-gray-600 mb-1">Role</label>
-                                                    <select name="role" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                    <label class="block text-gray-600 text-sm md:text-base mb-1">Role</label>
+                                                    <select name="role" class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                         <option value="user" {{ $user->role == 'user' ? 'selected' : '' }}>User</option>
                                                         <option value="clinic" {{ $user->role == 'clinic' ? 'selected' : '' }}>Clinic Staff</option>
                                                         <option value="doctor" {{ $user->role == 'doctor' ? 'selected' : '' }}>Doctor</option>
@@ -284,20 +311,20 @@
                                                 </div>
 
                                                 <div>
-                                                    <label class="block text-gray-600 mb-1">Password (leave blank if unchanged)</label>
+                                                    <label class="block text-gray-600 text-sm md:text-base mb-1">Password (leave blank if unchanged)</label>
                                                     <input type="password" name="password"
-                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+                                                        class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                     <input type="password" name="password_confirmation" placeholder="Confirm password"
-                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 mt-2 focus:ring focus:ring-blue-200">
+                                                        class="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 mt-2 text-sm md:text-base focus:ring focus:ring-blue-200">
                                                 </div>
 
-                                                <div class="flex justify-end space-x-2">
+                                                <div class="flex justify-end gap-2">
                                                     <button type="button" onclick="closeModal('editModal-{{ $user->id }}')"
-                                                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg shadow mt-3">
+                                                        class="bg-gray-500 hover:bg-gray-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow text-xs md:text-sm">
                                                         Cancel
                                                     </button>
                                                     <button type="submit"
-                                                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow mt-3">
+                                                        class="bg-green-500 hover:bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow text-xs md:text-sm">
                                                         Update
                                                     </button>
                                                 </div>
@@ -337,7 +364,7 @@
 
                 {{-- Pagination --}}
                 <div class="mt-6">
-                    @if(method_exists($users, 'links'))
+                    @if(is_object($users) && method_exists($users, 'links'))
                         {{ $users->links() }}
                     @endif
                 </div>
@@ -355,39 +382,54 @@
             document.getElementById(id).classList.add('hidden');
         }
 
-        // Make modals draggable
+        // Make modals draggable on desktop, but not on mobile
         document.querySelectorAll("[id^='draggable-']").forEach(modal => {
             let isDragging = false;
             let offsetX, offsetY;
-
-            modal.addEventListener("mousedown", (e) => {
-                // Only drag if clicked outside inputs/forms/buttons
-                if (e.target.closest("input, button, form, textarea, label")) return;
-
-                isDragging = true;
-                offsetX = e.clientX - modal.offsetLeft;
-                offsetY = e.clientY - modal.offsetTop;
-                modal.style.transition = "none"; // prevent snapping glitch
-            });
-
-            document.addEventListener("mousemove", (e) => {
-                if (isDragging) {
-                    modal.style.left = (e.clientX - offsetX) + "px";
-                    modal.style.top = (e.clientY - offsetY) + "px";
-                    modal.style.transform = "none"; // cancel center transform once moved
-                }
-            });
-
-            document.addEventListener("mouseup", () => {
-                isDragging = false;
-            });
+            
+            // Only enable dragging on larger screens
+            const isMobile = window.matchMedia("(max-width: 768px)").matches;
+            
+            if (!isMobile) {
+                modal.addEventListener("mousedown", (e) => {
+                    // Only drag if clicked outside inputs/forms/buttons
+                    if (e.target.closest("input, button, form, textarea, label, select")) return;
+    
+                    isDragging = true;
+                    offsetX = e.clientX - modal.offsetLeft;
+                    offsetY = e.clientY - modal.offsetTop;
+                    modal.style.transition = "none"; // prevent snapping glitch
+                });
+    
+                document.addEventListener("mousemove", (e) => {
+                    if (isDragging) {
+                        modal.style.left = (e.clientX - offsetX) + "px";
+                        modal.style.top = (e.clientY - offsetY) + "px";
+                        modal.style.transform = "none"; // cancel center transform once moved
+                    }
+                });
+    
+                document.addEventListener("mouseup", () => {
+                    isDragging = false;
+                });
+            } else {
+                // On mobile, ensure modal is centered and scrollable
+                modal.style.position = "relative";
+                modal.style.top = "auto";
+                modal.style.left = "auto";
+                modal.style.transform = "none";
+                modal.style.margin = "1rem auto";
+                modal.style.maxHeight = "80vh";
+                modal.style.overflowY = "auto";
+                modal.classList.remove("cursor-move");
+            }
         });
 
         // Bulk Actions and Export Functionality
         document.addEventListener('DOMContentLoaded', function() {
             // Export dropdown
             const exportBtn = document.querySelector('.dropdown button');
-            const exportDropdown = document.getElementById('exportDropdown');
+            const exportDropdown = document.getElementById('headerExportDropdown');
             
             exportBtn.addEventListener('click', function() {
                 exportDropdown.classList.toggle('hidden');

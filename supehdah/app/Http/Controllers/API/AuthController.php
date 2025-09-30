@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Laravel\Sanctum\PersonalAccessToken;
+use App\Http\Controllers\API\OtpVerificationController;
 
 class AuthController extends Controller
 {
@@ -48,13 +49,38 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'User registered successfully',
-            'token'   => $token,
-            'user'    => $user
-        ], 201);
+        
+        // Automatically generate and send OTP verification code
+        try {
+            $otpController = new OtpVerificationController();
+            $otpSent = $otpController->generateAndSendOtp($user);
+            
+            $message = 'User registered successfully';
+            if ($otpSent) {
+                $message .= ' and verification code sent to your email';
+            } else {
+                \Log::warning("Failed to send OTP during registration for user ID: {$user->id}");
+            }
+            
+            return response()->json([
+                'status'  => true,
+                'message' => $message,
+                'token'   => $token,
+                'user'    => $user,
+                'otp_sent' => $otpSent
+            ], 201);
+        } catch (\Exception $e) {
+            \Log::error("Failed to send OTP during registration: " . $e->getMessage());
+            
+            // Return success anyway since the user was created
+            return response()->json([
+                'status'  => true,
+                'message' => 'User registered successfully, but verification code could not be sent',
+                'token'   => $token,
+                'user'    => $user,
+                'otp_sent' => false
+            ], 201);
+        }
     }
 
     /**

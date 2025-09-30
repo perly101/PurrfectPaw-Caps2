@@ -89,7 +89,7 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
                                 @if($doctor->photo)
-                                <img class="h-10 w-10 rounded-full object-cover" src="{{ asset('storage/doctor_photos/' . $doctor->photo) }}" alt="{{ $doctor->full_name }}">
+                                <img class="h-10 w-10 rounded-full object-cover" src="{{ asset('storage/' . $doctor->photo) }}" alt="{{ $doctor->full_name }}">
                                 @else
                                 <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
                                     <span class="text-indigo-800 font-medium text-sm">{{ substr($doctor->first_name, 0, 1) }}{{ substr($doctor->last_name, 0, 1) }}</span>

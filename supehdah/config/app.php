@@ -174,6 +174,9 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\SettingsServiceProvider::class,  // Load settings from database
+        App\Providers\MailConfigServiceProvider::class,
+        App\Providers\SwiftMailerServiceProvider::class,
 
     ],
 

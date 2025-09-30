@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { API } from '../src/api';
+import { OtpApi } from '../src/otpApi';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,42 +33,150 @@ export default function LoginScreen(): React.ReactElement {
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  React.useEffect(() => {
+    // Check if the user has a pending OTP verification
+    const checkVerificationStatus = async () => {
+      const hasVerificationPending = await OtpApi.hasVerificationPending();
+      
+      if (hasVerificationPending) {
+        // Get the user info to extract email
+        try {
+          const userResponse = await API.get('/user');
+          const userEmail = userResponse.data.email;
+          
+          // Navigate to OTP verification screen if verification is pending
+          Alert.alert(
+            'Email Verification Required',
+            'Please complete your email verification.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('OTPVerification', { email: userEmail });
+                }
+              }
+            ]
+          );
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    };
+    
+    checkVerificationStatus();
+  }, [navigation]);
+
   const handleLogin = async (): Promise<void> => {
     try {
       setLoading(true);
 
+      // Clear any existing tokens before login
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('accessToken');
+
       const res = await API.post('/login', { email, password });
 
-      // backend returns token in res.data.token (adjust if different)
+      // Get the token from the response
       const token = res.data?.token ?? res.data?.access_token ?? res.data?.data?.token;
       if (!token) throw new Error('No token returned from server');
 
+      // Store the token in AsyncStorage first
       await AsyncStorage.setItem('token', token);
+      
+      // Also save as userToken for backwards compatibility
+      await AsyncStorage.setItem('userToken', token);
 
-      // optional immediate set for this instance (interceptor will handle future requests)
+      // Wait a moment for the token to be properly stored
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Set the token in the API headers immediately
       API.defaults.headers = API.defaults.headers || {};
       API.defaults.headers.common = API.defaults.headers.common || {};
       API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      Alert.alert('Success', res.data?.message ?? 'Logged in');
+      console.log('🔐 Successfully stored auth token and updated headers');
 
-      // Reset navigation to authenticated stack (replace with your route name)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'PersonalTabs' }], // change if your nav differs
-      });
+      // Extract user info directly from the login response if available
+      let userInfo = res.data?.user;
+      let isEmailVerified = userInfo?.email_verified_at !== null;
+      let userEmail = userInfo?.email || email;
+      
+      // Only make the additional /user request if we don't have complete user info
+      if (!userInfo || typeof userInfo.email_verified_at === 'undefined') {
+        try {
+          console.log('📥 Fetching additional user details...');
+          const userResponse = await API.get('/user');
+          userInfo = userResponse.data;
+          isEmailVerified = userInfo?.email_verified_at !== null;
+          userEmail = userInfo?.email || email;
+        } catch (userErr) {
+          console.error('⚠️ Error fetching user details, using available info:', userErr);
+          // Continue with what we have
+        }
+      }
+      
+      // Check if user needs email verification
+      if (!isEmailVerified) {
+        console.log('📧 Email verification required');
+        // Set verification pending flag
+        await OtpApi.setVerificationPending();
+        
+        // Store the fact that we're in a verification flow
+        await AsyncStorage.setItem('verification_flow', 'true');
+        
+        Alert.alert(
+          'Email Verification Required',
+          'Please verify your email address before proceeding.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.navigate('OTPVerification', { email: userEmail });
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('✅ Email already verified, proceeding to dashboard');
+        // Clear any verification flow flag
+        await AsyncStorage.removeItem('verification_flow');
+        
+        // Email is already verified, navigate to dashboard
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'PersonalTabs' }],
+        });
+      }
     } catch (err: unknown) {
+      // Clear any tokens since login failed
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('accessToken');
+      
+      console.error('❌ Login failed:', err);
+      
       if (axios.isAxiosError(err)) {
-        const msg =
-          err.response?.data?.message ??
-          err.response?.data ??
-          err.message ??
-          'Login failed';
-        Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
+        // Check for specific error conditions
+        if (err.response?.status === 401) {
+          Alert.alert('Invalid Credentials', 'Please check your email and password and try again.');
+        } else if (err.response?.status === 429) {
+          Alert.alert('Too Many Attempts', 'Please wait a moment before trying again.');
+        } else if (!err.response) {
+          Alert.alert('Connection Error', 'Could not connect to the server. Please check your internet connection and try again.');
+        } else {
+          // Get error message from response
+          const msg =
+            err.response?.data?.message ??
+            err.response?.data ??
+            err.message ??
+            'Login failed';
+          Alert.alert('Login Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
       } else if (err instanceof Error) {
         Alert.alert('Error', err.message);
       } else {
-        Alert.alert('Error', 'Something went wrong');
+        Alert.alert('Error', 'Something went wrong during login. Please try again.');
       }
     } finally {
       setLoading(false);

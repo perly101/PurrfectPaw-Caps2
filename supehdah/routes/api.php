@@ -21,6 +21,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    
+    // OTP Verification API Routes with rate limiting
+    // Maximum 5 attempts per minute for OTP verification
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/verify-otp', [App\Http\Controllers\API\OtpVerificationController::class, 'verify']);
+        Route::post('/resend-otp', [App\Http\Controllers\API\OtpVerificationController::class, 'resend']);
+    });
+    
+    Route::get('/user/email-verified', [App\Http\Controllers\API\OtpVerificationController::class, 'checkVerified']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {

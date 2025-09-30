@@ -11,7 +11,7 @@
                     </a>
                 </div>
 
-                <h1 class="text-center text-2xl font-bold text-[#1C5B38] mb-1">SuPehDah</h1>
+                <h1 class="text-center text-2xl font-bold text-[#1C5B38] mb-1">PurrfectPaw</h1>
                 <p class="text-center text-gray-600 text-sm mb-6">Login to your account</p>
 
                 <!-- Session Status -->

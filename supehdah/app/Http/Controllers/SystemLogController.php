@@ -17,6 +17,9 @@ class SystemLogController extends Controller
     {
         $search = $request->input('search');
         $status = $request->input('status');
+        $type = $request->input('type'); // New filter for log type
+        $userType = $request->input('user_type'); // New filter for user type
+        $dateRange = $request->input('date_range'); // New filter for date range
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         
@@ -24,25 +27,74 @@ class SystemLogController extends Controller
         
         // Apply filters
         if ($search) {
-            $query->where('action', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                  ->orWhere('details', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%");
+            });
         }
         
         if ($status) {
             $query->where('status', $status);
         }
         
-        if ($dateFrom) {
-            $query->whereDate('created_at', '>=', $dateFrom);
+        // Handle log type filter
+        if ($type) {
+            switch ($type) {
+                case 'login':
+                    $query->where('action', 'like', '%login%');
+                    break;
+                case 'data':
+                    $query->where('action', 'like', '%update%')
+                         ->orWhere('action', 'like', '%create%')
+                         ->orWhere('action', 'like', '%delete%');
+                    break;
+                case 'system':
+                    $query->where('action', 'like', '%system%');
+                    break;
+            }
         }
         
-        if ($dateTo) {
-            $query->whereDate('created_at', '<=', $dateTo);
+        // Handle user type filter
+        if ($userType) {
+            if ($userType === 'system') {
+                $query->whereNull('user_id');
+            } else {
+                $query->whereHas('user', function($q) use ($userType) {
+                    $q->where('role', $userType);
+                });
+            }
+        }
+        
+        // Handle date range filter
+        if ($dateRange) {
+            $now = now();
+            switch ($dateRange) {
+                case 'today':
+                    $query->whereDate('created_at', $now->format('Y-m-d'));
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', $now->subDays(7));
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', $now->subDays(30));
+                    break;
+            }
+        } else {
+            // Use explicit date range if provided
+            if ($dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            }
+            
+            if ($dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            }
         }
         
         $logs = $query->paginate(15);
         $logs->appends($request->all());
         
-        return view('admin.system_logs', compact('logs'));
+        return view('admin.logs', compact('logs'));
     }
     
     /**

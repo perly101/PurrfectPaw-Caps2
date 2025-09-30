@@ -31,13 +31,6 @@ type Appointment = {
   clinic: string;
 };
 
-type Pet = {
-  id: string;
-  name: string;
-  type: string;
-  breed?: string;
-};
-
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
 
@@ -45,7 +38,6 @@ export default function HomeScreen() {
   const [userName, setUserName] = React.useState<string | null>(null);
   const [loadingUser, setLoadingUser] = React.useState<boolean>(false);
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
-  const [pets, setPets] = React.useState<Pet[]>([]);
   const [refreshing, setRefreshing] = React.useState<boolean>(false);
 
   const getTimeBasedGreeting = React.useCallback(() => {
@@ -57,11 +49,24 @@ export default function HomeScreen() {
 
   const fetchUserData = React.useCallback(async () => {
     try {
+      // Check if we have a token before attempting the request
+      const token = await AsyncStorage.getItem('token') || 
+                   await AsyncStorage.getItem('userToken') || 
+                   await AsyncStorage.getItem('accessToken');
+                   
+      if (!token) {
+        console.log('No auth token available, skipping user data fetch');
+        return;
+      }
+      
       setLoadingUser(true);
       const res = await API.get('/me');
       setUserName(res.data?.name ?? null);
-    } catch (e) {
-      console.error('Failed to fetch user:', e);
+    } catch (e: any) {
+      // Only log detailed errors for non-auth issues to reduce console spam
+      if (e?.response?.status !== 401 && e?.response?.status !== 429) {
+        console.error('Error fetching user data:', e);
+      }
     } finally {
       setLoadingUser(false);
     }
@@ -85,46 +90,14 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Fetch real pets from backend (same logic as PetScreen)
-  const fetchPets = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('userToken');
-      const response = await API.get('/pets', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.data?.status === 'success' || response.data?.data) {
-        // Support both response.data.data and response.data.pets
-        const petsData = response.data.data || response.data.pets || [];
-        // Map to HomeScreen Pet type
-        const mappedPets = petsData.map((pet: any) => ({
-          id: pet.id?.toString() ?? '',
-          name: pet.name,
-          type: pet.type || pet.breed || '',
-          breed: pet.breed || '',
-        }));
-        setPets(mappedPets.slice(0, 2)); // Show max 2
-      } else {
-        setPets([]);
-      }
-    } catch (e) {
-      console.error('Failed to fetch pets:', e);
-      setPets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const fetchAllData = React.useCallback(async () => {
     if (!refreshing) setLoading(true);
 
-    await Promise.all([fetchUserData(), fetchAppointments(), fetchPets()]);
+    await Promise.all([fetchUserData(), fetchAppointments()]);
 
     setLoading(false);
     setRefreshing(false);
-  }, [refreshing, fetchUserData, fetchAppointments, fetchPets]);
+  }, [refreshing, fetchUserData, fetchAppointments]);
 
   React.useEffect(() => {
     fetchAllData();
@@ -135,7 +108,7 @@ export default function HomeScreen() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // temp routes used: 'Appointments', 'Records', 'Pets' — replace with your route names as needed
+  // temp routes used: 'Appointments', 'Records' — replace with your route names as needed
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -174,58 +147,21 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* My Pets Section */}
-        {pets.length > 0 && (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>My Pets</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Pets')}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.petsContainer}>
-              {pets.map((pet) => (
-                <View key={pet.id} style={styles.petCard}>
-                  <View style={styles.petIcon}>
-                    <MaterialCommunityIcons
-                      name={
-                        pet.type.toLowerCase().includes('dog')
-                          ? 'dog'
-                          : pet.type.toLowerCase().includes('cat')
-                          ? 'cat'
-                          : 'paw'
-                      }
-                      size={24}
-                      color={PURPLE}
-                    />
-                  </View>
-                  <View style={styles.petInfo}>
-                    <Text style={styles.petName}>{pet.name}</Text>
-                    <Text style={styles.petType}>{pet.breed}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
+        {/* Welcome Card */}
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeLeft}>
+            <Text style={styles.welcomeTitle}>Welcome to SuPehDah</Text>
+            <Text style={styles.welcomeText}>
+              Manage appointments, records, and connect with trusted clinics — all in one place.
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Appointments')}>
+              <Text style={styles.primaryBtnText}>Book Appointment</Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        {/* Welcome Card - Show only if no pets */}
-        {pets.length === 0 && (
-          <View style={styles.welcomeCard}>
-            <View style={styles.welcomeLeft}>
-              <Text style={styles.welcomeTitle}>Welcome to SuPehDah</Text>
-              <Text style={styles.welcomeText}>
-                Manage appointments, records, and connect with trusted clinics — all in one place.
-              </Text>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Appointments')}>
-                <Text style={styles.primaryBtnText}>Book Appointment</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.welcomeGraphic}>
-              <MaterialCommunityIcons name="dog-side" size={48} color={PINK} />
-            </View>
+          <View style={styles.welcomeGraphic}>
+            <MaterialCommunityIcons name="dog-side" size={48} color={PINK} />
           </View>
-        )}
+        </View>
 
         {/* Appointments & Calendar */}
         <View style={styles.rowCards}>
@@ -348,13 +284,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '700', color: DARK },
   seeAllText: { fontSize: 14, color: PURPLE, fontWeight: '600' },
 
-  // Pet card styles
-  petsContainer: { flexDirection: 'row', gap: 12 },
-  petCard: { flex: 1, backgroundColor: '#F8F9FA', borderRadius: 12, padding: 12, alignItems: 'center' },
-  petIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: WHITE, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  petInfo: { alignItems: 'center' },
-  petName: { fontSize: 14, fontWeight: '600', color: DARK, textAlign: 'center' },
-  petType: { fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 2 },
+  // Removed pet card styles
 
   welcomeCard: { backgroundColor: WHITE, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 16, shadowColor: '#B39DDB', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
   welcomeLeft: { flex: 1 },

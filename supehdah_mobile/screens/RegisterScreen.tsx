@@ -16,6 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import { API } from '../src/api';
+import { OtpApi } from '../src/otpApi';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -89,13 +90,57 @@ export default function RegisterScreen(): React.ReactElement {
       API.defaults.headers.common = API.defaults.headers.common || {};
       API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      Alert.alert('Success', 'Registration successful!');
-
-      // Navigate to the personal dashboard
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'PersonalTabs' }],
-      });
+      // Check if the user's email is verified
+      const userInfo = loginRes.data?.user;
+      const isEmailVerified = userInfo?.email_verified_at !== null;
+      
+      if (isEmailVerified) {
+        // Email is already verified, navigate to dashboard
+        Alert.alert('Success', 'Registration successful!');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'PersonalTabs' }],
+        });
+      } else {
+        // Email needs verification, navigate to OTP verification screen
+        if (res.data?.otp_sent === false) {
+          // OTP wasn't automatically sent, notify user
+          Alert.alert(
+            'Almost there!', 
+            'Registration successful! Please request a verification code to verify your email.',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  // Set verification pending flag
+                  await OtpApi.setVerificationPending();
+                  
+                  // Navigate to OTP verification screen where user will need to manually resend
+                  navigation.navigate('OTPVerification', { email });
+                }
+              }
+            ]
+          );
+        } else {
+          // OTP was sent automatically
+          Alert.alert(
+            'Success', 
+            'Registration successful! We have sent a verification code to your email.',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  // Set verification pending flag
+                  await OtpApi.setVerificationPending();
+                  
+                  // Navigate to OTP verification screen
+                  navigation.navigate('OTPVerification', { email });
+                }
+              }
+            ]
+          );
+        }
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const errorData = err.response?.data;

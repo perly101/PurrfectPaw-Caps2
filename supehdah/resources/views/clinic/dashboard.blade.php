@@ -4,18 +4,20 @@
 @endphp
 
 <x-app-layout>
+    {{-- Include mobile navigation (only visible on mobile) --}}
+    @include('clinic.components.mobile-nav')
 
-    <div class="py-12 bg-gray-100 min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
+    <div class="py-6 md:py-12 bg-gray-100 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:space-x-6">
 
-            {{-- Sidebar --}}
-            <div class="w-1/4">
+            {{-- Sidebar (hidden on mobile) --}}
+            <div class="hidden md:block md:w-1/4 lg:w-1/4">
                 @include('clinic.components.sidebar')
             </div>
 
             {{-- Main Dashboard Content --}}
-            <div class="w-3/4">
-                <div class="bg-white shadow-xl rounded-lg p-8 flex flex-col items-center text-center">
+            <div class="w-full md:w-3/4 mt-16 md:mt-0">
+                <div class="bg-white shadow-xl rounded-lg p-4 md:p-8 flex flex-col items-center text-center">
 
                     @if ($clinic && $clinic->profile_picture)
                         <img src="{{ asset('storage/' . $clinic->profile_picture) }}"

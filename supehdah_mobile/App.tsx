@@ -7,7 +7,9 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import ClinicTabs from './navigation/ClinicTabs';
 import RegisterScreen from './screens/RegisterScreen';
 import BookAppointmentScreen from './screens/BookAppointmentScreen';
+import OTPVerificationScreen from './screens/OTPVerificationScreen';
 import { setNavigationRef } from './src/api';
+import { ThemeProvider } from './src/utils/theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -15,6 +17,9 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Register: undefined;
   ClinicTabs: undefined;
+  OTPVerification: {
+    email?: string;
+  };
   BookAppointment: { 
     clinicId: number; 
     clinicName?: string;
@@ -35,26 +40,29 @@ export default function App() {
   const navigationRef = useRef(null);
 
   return (
-    <NavigationContainer 
-      ref={(ref) => {
-        // Set the navigation reference in our API module for auth redirects
-        if (ref) {
-          // @ts-ignore - TypeScript doesn't know about the custom setNavigationRef function
-          navigationRef.current = ref;
-          setNavigationRef(ref);
-        }
-      }}
-    >
+    <ThemeProvider>
+      <NavigationContainer 
+        ref={(ref) => {
+          // Set the navigation reference in our API module for auth redirects
+          if (ref) {
+            // @ts-ignore - TypeScript doesn't know about the custom setNavigationRef function
+            navigationRef.current = ref;
+            setNavigationRef(ref);
+          }
+        }}
+      >
       <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="PersonalTabs" component={PersonalTabs} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ClinicTabs" component={ClinicTabs} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
         {/* Connection test screen removed from initial routing but kept for development purposes */}
       </Stack.Navigator>
     </NavigationContainer>
+    </ThemeProvider>
   );
 }
 

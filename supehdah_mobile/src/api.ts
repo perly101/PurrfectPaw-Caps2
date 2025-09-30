@@ -1,18 +1,25 @@
+//php artisan serve --host=0.0.0.0 --port=8000
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 
-// Use only a single fixed API base URL
+// Define multiple potential API base URLs to try
+// The app will try these URLs in order until it finds one that works
 const API_BASE_URLS = [
-  'http://192.168.137.1:8000/api' // Local network
+  'http://192.168.1.4:8000/api', // Local development network
+  'http://10.0.2.2:8000/api',    // Android emulator default
+  'http://localhost:8000/api',   // iOS simulator
+  'https://api.supehdah.com/api' // Production server (replace with your actual production URL)
 ];
 
-// Use the fixed base URL - no need to detect or store it anymore
-const API_BASE_URL = API_BASE_URLS[0];
+// Variable to store the active API URL once discovered
+let activeApiUrl = '';
 
-// Create API instance with our fixed URL
+// Create API instance with placeholder URL that will be updated
 export const API = axios.create({
-  baseURL: API_BASE_URL,
+  // We'll set the baseURL after connection detection
   headers: { 
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -20,8 +27,77 @@ export const API = axios.create({
   timeout: 15000 // 15 seconds timeout
 });
 
-// Log the initialized API URL
-console.log(`Initialized API with fixed base URL: ${API.defaults.baseURL}`);
+// Function to test if a URL is reachable
+const isUrlReachable = async (url: string): Promise<boolean> => {
+  try {
+    // Attempt a HEAD request to check if the server is available
+    const testInstance = axios.create({
+      timeout: 3000 // Short timeout for checking
+    });
+    await testInstance.head(url);
+    return true;
+  } catch (error) {
+    console.log(`API URL ${url} is not reachable`);
+    return false;
+  }
+};
+
+// Function to discover and set the best API URL
+export const configureApiUrl = async (): Promise<void> => {
+  try {
+    // First check network connection
+    const netInfo = await NetInfo.fetch();
+    
+    if (!netInfo.isConnected) {
+      Alert.alert('Network Error', 'No internet connection available.');
+      return;
+    }
+
+    // Try to load a stored API URL first (if we've successfully used one before)
+    const storedApiUrl = await AsyncStorage.getItem('@api_url');
+    if (storedApiUrl) {
+      try {
+        if (await isUrlReachable(storedApiUrl)) {
+          API.defaults.baseURL = storedApiUrl;
+          activeApiUrl = storedApiUrl;
+          console.log(`Using stored API URL: ${storedApiUrl}`);
+          return;
+        }
+      } catch (error) {
+        console.log('Stored API URL is not working, trying alternatives...');
+      }
+    }
+
+    // Try each URL until one works
+    for (const url of API_BASE_URLS) {
+      try {
+        if (await isUrlReachable(url)) {
+          API.defaults.baseURL = url;
+          activeApiUrl = url;
+          // Store the working URL for future app launches
+          await AsyncStorage.setItem('@api_url', url);
+          console.log(`Found working API URL: ${url}`);
+          return;
+        }
+      } catch (error) {
+        console.log(`Error testing ${url}:`, error);
+      }
+    }
+
+    // If we get here, none of the URLs worked
+    Alert.alert(
+      'Connection Error', 
+      'Unable to connect to the server. Please check your internet connection and try again.'
+    );
+    
+  } catch (error) {
+    console.error('Error configuring API URL:', error);
+    Alert.alert('Error', 'Failed to configure network connection.');
+  }
+};
+
+// Call this function when the app starts to configure the API
+// We'll call this in the App component useEffect
 
 // Global navigation reference to allow programmatic navigation outside components
 let navigationRef: any = null;

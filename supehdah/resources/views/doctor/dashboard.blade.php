@@ -1,30 +1,35 @@
 <x-app-layout>
-    <div class="py-12 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    {{-- Include mobile navigation (only visible on mobile) --}}
+    @include('doctor.components.mobile-nav')
+    
+    <div class="py-6 md:py-12 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            {{-- Include Sidebar --}}
-            @include('doctor.components.sidebar')
+            {{-- Include Sidebar (hidden on mobile) --}}
+            <div class="hidden md:block">
+                @include('doctor.components.sidebar')
+            </div>
             
             {{-- Main Content --}}
-            <div class="ml-64 pl-8">
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome, Dr. {{ $doctor->first_name }}</h1>
-                    <p class="text-gray-600">Here's an overview of your medical practice</p>
+            <div class="md:ml-64 md:pl-8 mt-16 md:mt-0">
+                <div class="mb-6 md:mb-8">
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Welcome, Dr. {{ $doctor->first_name }}</h1>
+                    <p class="text-sm md:text-base text-gray-600">Here's an overview of your medical practice</p>
                 </div>
                 
                 @if(session('success'))
-                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded shadow-sm" role="alert">
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-3 md:p-4 mb-4 md:mb-6 rounded shadow-sm" role="alert">
                         <div class="flex items-center">
-                            <svg class="h-5 w-5 mr-2 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <svg class="h-4 w-4 md:h-5 md:w-5 mr-2 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                             </svg>
-                            <p>{{ session('success') }}</p>
+                            <p class="text-sm md:text-base">{{ session('success') }}</p>
                         </div>
                     </div>
                 @endif
                 
                 {{-- Stats Overview --}}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-6 md:mb-8">
                     <!-- Total Patients -->
                     <div class="bg-gradient-to-br from-white to-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
                         <div class="flex items-center">

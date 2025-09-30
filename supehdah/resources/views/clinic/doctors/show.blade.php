@@ -29,7 +29,7 @@
             <div class="absolute top-16 left-6">
                 <div class="h-28 w-28 rounded-full border-4 border-white overflow-hidden bg-white">
                     @if($doctor->photo)
-                    <img src="{{ asset('storage/doctor_photos/' . $doctor->photo) }}" alt="{{ $doctor->full_name }}" class="h-full w-full object-cover">
+                    <img src="{{ asset('storage/' . $doctor->photo) }}" alt="{{ $doctor->full_name }}" class="h-full w-full object-cover">
                     @else
                     <div class="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
