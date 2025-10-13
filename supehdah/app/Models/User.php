@@ -38,7 +38,8 @@ class User extends Authenticatable implements MustVerifyEmail
  
 protected $fillable = [
     'first_name', 'middle_name', 'last_name', 'email', 'phone_number', 
-    'gender', 'birthday', 'password', 'role',
+    'gender', 'birthday', 'password', 'role', 'google_id', 'google_token',
+    'google_refresh_token', 'avatar', 'device_token',
 ];
 
     /**
@@ -82,6 +83,14 @@ public function pets()
 public function verificationOtp()
 {
     return $this->hasOne(EmailVerificationOtp::class);
+}
+
+/**
+ * Get the notifications for this user.
+ */
+public function notifications()
+{
+    return $this->morphMany(Notification::class, 'notifiable');
 }
 
 }

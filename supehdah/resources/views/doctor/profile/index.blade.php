@@ -23,7 +23,7 @@
                         <div class="flex flex-col md:flex-row items-start md:items-center">
                             <div class="mr-8 mb-4 md:mb-0">
                                 @if($doctor->photo)
-                                    <img src="{{ asset('storage/' . $doctor->photo) }}" alt="{{ $doctor->first_name }}" class="w-32 h-32 rounded-full object-cover">
+                                    <img src="{{ asset('storage/doctor_photos/' . $doctor->photo) }}" alt="{{ $doctor->first_name }}" class="w-32 h-32 rounded-full object-cover">
                                 @else
                                     <div class="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center">
                                         <span class="text-3xl font-bold text-blue-600">{{ substr($doctor->first_name, 0, 1) . substr($doctor->last_name, 0, 1) }}</span>

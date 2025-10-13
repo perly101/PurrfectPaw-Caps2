@@ -36,6 +36,10 @@ Route::get('/', function () {
     return view('/auth/login');
 });
 
+// Google OAuth Routes
+Route::get('/auth/google', [App\Http\Controllers\Auth\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/auth/google/callback', [App\Http\Controllers\Auth\GoogleController::class, 'handleGoogleCallback']);
+
 // User dashboard (accessible to all authenticated users)
 Route::get('/dashboard', function () {
     return view('/user/dashboard');
@@ -158,7 +162,38 @@ Route::middleware(['auth', 'role:clinic'])->group(function () {
         // Patients management
         Route::get('/patients', [\App\Http\Controllers\Clinic\PatientController::class, 'index'])->name('patients.index');
         Route::get('/patients/{patientId}', [\App\Http\Controllers\Clinic\PatientController::class, 'show'])->name('patients.show');
+        
+        // Notifications management
+        Route::get('/notifications', [\App\Http\Controllers\Clinic\NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/settings', [\App\Http\Controllers\Clinic\NotificationController::class, 'settings'])->name('notifications.settings');
+        Route::post('/notifications/{id}/mark-read', [\App\Http\Controllers\Clinic\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+        Route::post('/notifications/read-all', [\App\Http\Controllers\Clinic\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::delete('/notifications/{id}', [\App\Http\Controllers\Clinic\NotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('/check-new-notifications', [\App\Http\Controllers\Clinic\NotificationController::class, 'checkNewNotifications']);
+        Route::get('/notifications-component', [\App\Http\Controllers\Clinic\NotificationController::class, 'getNotificationsComponent']);
+        
+        // Test notification route
+        Route::get('/test-notification', [\App\Http\Controllers\Clinic\TestNotificationController::class, 'testNotification'])->name('notifications.test');
     });
+});
+
+// ========== GLOBAL NOTIFICATION ROUTES ==========
+// These routes are accessible from any page in the app and handle global notifications
+Route::middleware(['auth'])->group(function () {
+    Route::get('/check-new-notifications', [\App\Http\Controllers\GlobalNotificationController::class, 'checkNewNotifications']);
+    Route::get('/notification-count', [\App\Http\Controllers\GlobalNotificationController::class, 'getNotificationCount']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\GlobalNotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [\App\Http\Controllers\GlobalNotificationController::class, 'markAllAsRead']);
+});
+
+// ========== TEST ROUTES ==========
+// These routes are for testing functionality and should be disabled in production
+Route::prefix('test')->group(function () {
+    Route::get('/appointment-notification', [\App\Http\Controllers\Test\TestNotificationController::class, 'testAppointmentNotification']);
+    Route::get('/notification-sound', [\App\Http\Controllers\Test\TestNotificationController::class, 'testNotificationSound'])->name('test.notification-sound');
+    Route::get('/global-notifications', function() {
+        return view('test.global-notification-test');
+    })->name('test.global-notifications');
 });
 
 // ========== DOCTOR ROUTES ==========
@@ -177,6 +212,7 @@ Route::middleware(['auth', 'role:doctor'])->prefix('doctor')->name('doctor.')->g
     // Patients
     Route::get('/patients', [DoctorPatientController::class, 'index'])->name('patients.index');
     Route::get('/patients/{phone}', [DoctorPatientController::class, 'show'])->name('patients.show');
+    Route::get('/patients/{phone}/history', [DoctorPatientController::class, 'getHistory'])->name('patients.history');
     
     // Profile
     Route::get('/profile', [DoctorProfileController::class, 'index'])->name('profile.index');

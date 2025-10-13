@@ -17,8 +17,8 @@ class FixAppointmentsStatusColumn extends Migration
         // First, let's see if there are any problematic status values
         // that don't fit into our ENUM
         if (Schema::hasTable('appointments')) {
-            // Update any status values that don't match our ENUM to 'scheduled'
-            DB::statement("UPDATE appointments SET status = 'scheduled' WHERE status NOT IN ('scheduled', 'confirmed', 'completed', 'cancelled', 'no_show')");
+            // FIXED: Update 'closed' status to 'completed' (which is valid in the current ENUM)
+            DB::statement("UPDATE appointments SET status = 'completed' WHERE status = 'closed'");
             
             // Now it's safe to modify the column
             Schema::table('appointments', function (Blueprint $table) {

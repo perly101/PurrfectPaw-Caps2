@@ -99,3 +99,23 @@ if (app()->environment(['local', 'development', 'testing'])) {
 
 Route::middleware('auth:sanctum')->put('/update-profile', [AuthController::class, 'updateProfile']);
 
+// Notification API Routes
+Route::middleware('auth:sanctum')->group(function () {
+    // Doctor notifications
+    Route::get('/notifications', [App\Http\Controllers\API\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [App\Http\Controllers\API\NotificationController::class, 'getUnreadCount']);
+    Route::post('/notifications/{id}/read', [App\Http\Controllers\API\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [App\Http\Controllers\API\NotificationController::class, 'destroy']);
+    
+    // Clinic notifications
+    Route::get('/clinic/notifications', [App\Http\Controllers\API\ClinicNotificationController::class, 'index']);
+    Route::get('/clinic/notifications/unread-count', [App\Http\Controllers\API\ClinicNotificationController::class, 'getUnreadCount']);
+    Route::post('/clinic/notifications/{id}/mark-read', [App\Http\Controllers\API\ClinicNotificationController::class, 'markAsRead']);
+    Route::post('/clinic/notifications/read-all', [App\Http\Controllers\API\ClinicNotificationController::class, 'markAllAsRead']);
+    Route::delete('/clinic/notifications/{id}', [App\Http\Controllers\API\ClinicNotificationController::class, 'destroy']);
+    
+    // Device token
+    Route::post('/device-token', [App\Http\Controllers\API\NotificationController::class, 'updateDeviceToken']);
+});
+

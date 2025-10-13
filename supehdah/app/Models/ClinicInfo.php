@@ -38,5 +38,10 @@ public function services()
 {
     return $this->hasMany(\App\Models\ClinicService::class, 'clinic_id')->orderBy('order');
 }
+
+public function notifications()
+{
+    return $this->morphMany(\App\Models\Notification::class, 'notifiable');
+}
     
 }

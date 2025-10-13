@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Clinic;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Clinic;
 use App\Models\ClinicInfo;
+use App\Models\Doctor;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AppointmentController extends Controller
 {
@@ -97,8 +101,20 @@ class AppointmentController extends Controller
             return back()->withErrors(['doctor' => 'An appointment must be assigned to a doctor before marking as completed.']);
         }
         
+        $oldStatus = $appointment->status;
         $appointment->status = $request->status;
         $appointment->save();
+        
+        // If the appointment is marked as completed, send a notification
+        if ($request->status === 'completed' && $oldStatus !== 'completed') {
+            try {
+                $notificationService = app(NotificationService::class);
+                $notificationService->notifyClinicAppointmentCompleted($clinic, $appointment);
+            } catch (\Exception $e) {
+                // Log the error but don't prevent the status update
+                Log::error('Failed to send appointment completion notification: ' . $e->getMessage());
+            }
+        }
         
         return redirect()->route('clinic.appointments.show', $id)
             ->with('success', 'Appointment status updated successfully');
@@ -128,6 +144,13 @@ class AppointmentController extends Controller
         }
         
         $appointment->save();
+        
+        // Send notification to the doctor about the new patient assignment
+        $doctor = Doctor::find($request->doctor_id);
+        if ($doctor && $doctor->user && $appointment->user) {
+            $notificationService = app(NotificationService::class);
+            $notificationService->notifyDoctorPatientAssigned($doctor->user, $appointment->user);
+        }
         
         return redirect()->route('clinic.appointments.show', $id)
             ->with('success', 'Doctor assigned to appointment successfully');

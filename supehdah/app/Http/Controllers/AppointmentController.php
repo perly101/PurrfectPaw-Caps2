@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\AppointmentFieldValue;
 use App\Models\ClinicField;
 use App\Models\ClinicInfo;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
@@ -44,6 +45,15 @@ class AppointmentController extends Controller
                 'clinic_field_id' => $fieldId,
                 'value' => $value,
             ]);
+        }
+        
+        // Send notification to clinic about the new appointment
+        try {
+            $notificationService = app(NotificationService::class);
+            $notificationService->notifyClinicNewAppointment($clinic, $appointment);
+        } catch (\Exception $e) {
+            // Log the error but don't prevent the appointment from being created
+            \Illuminate\Support\Facades\Log::error('Failed to send notification: ' . $e->getMessage());
         }
 
         return redirect()->route('appointments.show', $appointment->id)

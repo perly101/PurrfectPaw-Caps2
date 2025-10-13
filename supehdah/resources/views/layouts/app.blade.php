@@ -25,6 +25,13 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <!-- Notifications Script (clinic only) -->
+    @if(auth()->check() && auth()->user()->role === 'clinic')
+        <script src="{{ asset('js/enhanced-notification-sound.js') }}"></script>
+        <script src="{{ asset('js/global-notifications.js') }}"></script>
+        <script src="{{ asset('js/notifications.js') }}"></script>
+    @endif
+    
     <!-- Additional Responsive Styles -->
     <style>
         @media (max-width: 768px) {
@@ -50,6 +57,13 @@
     </style>
 </head>
 <body class="font-sans antialiased">
+    <!-- Global Notification Container (only for clinic users) -->
+    @if(auth()->check() && auth()->user()->role === 'clinic')
+        <div id="global-notification-container" class="fixed top-0 right-0 z-50 p-4 w-full md:w-80 pointer-events-none"></div>
+        <div id="global-popup-notification-container" class="fixed bottom-4 right-4 z-50 pointer-events-none"></div>
+        <audio id="global-notification-sound" src="{{ asset('sounds/noti.mp3') }}" preload="auto" style="display: none;"></audio>
+    @endif
+
     <div class="min-h-screen bg-gray-100">
 
         <!-- Page Heading -->

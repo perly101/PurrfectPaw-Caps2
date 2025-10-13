@@ -69,6 +69,7 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
   const [clinicId, setClinicId] = React.useState<number | null>(routeClinicId || null);
   const [ownerName, setOwnerName] = React.useState<string>('');
   const [ownerPhone, setOwnerPhone] = React.useState<string>('');
+  const [ownerEmail, setOwnerEmail] = React.useState<string>('');
 
   const [fields, setFields] = React.useState<ClinicField[]>([]);
   const [values, setValues] = React.useState<Record<string, any>>({});
@@ -102,70 +103,92 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
           const parsed = stored ? JSON.parse(stored) : null;
           setClinicId(parsed?.id ?? null);
         }
-      } catch {}
-      try {
-        const me = await API.get('/me');
-        setOwnerName(me.data?.name || '');
-      } catch {}
+      } catch (error) {
+        console.error('Error getting clinic ID from storage:', error);
+      }
+      
+      // Moved user data fetching to separate useEffect below
     })();
   }, [routeClinicId]);
   
   // Handle date and time slot from calendar if provided
+    // Fetch user data from API
+  React.useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Get user data from API
+        const response = await API.get('/me');
+        let userData = response.data;
+        console.log('Raw API response:', response);
+        console.log('User data received:', userData);
+        
+        // Check if the user data might be nested under a 'data' property (common in Laravel API responses)
+        if (userData?.data && typeof userData.data === 'object') {
+          userData = userData.data;
+          console.log('Using nested data property:', userData);
+        }
+        
+        // Log each field to diagnose issues
+        console.log('Name field:', userData?.name);
+        console.log('Phone field values:', userData?.phone_number, userData?.phone, userData?.mobile);
+        console.log('Email field:', userData?.email);
+        
+        // Populate the form fields with user data - try different field names
+        if (userData) {
+          // Name - try different possible field names
+          if (userData.name) {
+            setOwnerName(userData.name);
+            console.log('Set owner name:', userData.name);
+          } else if (userData.full_name) {
+            setOwnerName(userData.full_name);
+            console.log('Set owner name from full_name:', userData.full_name);
+          }
+          
+          // Phone - try different possible field names
+          if (userData.phone_number) {
+            setOwnerPhone(userData.phone_number);
+            console.log('Set owner phone from phone_number:', userData.phone_number);
+          } else if (userData.phone) {
+            setOwnerPhone(userData.phone);
+            console.log('Set owner phone from phone:', userData.phone);
+          } else if (userData.mobile) {
+            setOwnerPhone(userData.mobile);
+            console.log('Set owner phone from mobile:', userData.mobile);
+          } else if (userData.contact) {
+            setOwnerPhone(userData.contact);
+            console.log('Set owner phone from contact:', userData.contact);
+          }
+          
+          // Email - try different possible field names
+          if (userData.email) {
+            setOwnerEmail(userData.email);
+            console.log('Set owner email:', userData.email);
+          } else if (userData.email_address) {
+            setOwnerEmail(userData.email_address);
+            console.log('Set owner email from email_address:', userData.email_address);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+
   React.useEffect(() => {
     if (calendarDate || calendarTimeSlot) {
       console.log('Received calendar selections:', { calendarDate, calendarTimeSlot });
       
       // Update values with calendar date if provided
-      if (calendarDate) {
-        setValues(prev => ({
-          ...prev,
-          appointment_date: calendarDate
-        }));
-      }
+      if (calendarDate) {/* Lines 120-124 omitted */}
       
       // Update values with calendar time if provided
-      if (calendarTimeSlot) {
-        setValues(prev => ({
-          ...prev,
-          appointment_time: calendarTimeSlot.start
-        }));
-        
-        // Show an alert to inform the user about the pre-selected time
-        if (calendarDate) {
-          // Format date for display
-          const dateParts = calendarDate.split('-');
-          const formattedDate = new Date(
-            parseInt(dateParts[0]), 
-            parseInt(dateParts[1]) - 1, 
-            parseInt(dateParts[2])
-          );
-          
-          Alert.alert(
-            "Pre-selected Appointment",
-            `You've selected ${format(formattedDate, 'MMMM d, yyyy')} at ${calendarTimeSlot.display_time}. Please complete the form to book your appointment.`,
-            [{ text: "OK" }]
-          );
-        }
-      }
+      if (calendarTimeSlot) {/* Lines 128-149 omitted */}
       
       // Highlight the appointment form to draw attention to it
       // This makes it clear that they need to complete the form after selecting a date/time
-      setTimeout(() => {
-        console.log('Highlighting appointment form after calendar selection');
-        
-        // Scroll to the appointment form
-        if (scrollViewRef.current) {
-          // Scroll to the owner info section
-          scrollViewRef.current.scrollTo({ y: 300, animated: true });
-        }
-        
-        // Set a temporary highlight effect
-        setError('Please complete the form below to confirm your appointment');
-        setTimeout(() => {
-          // Clear the message after a few seconds
-          setError(null);
-        }, 3000);
-      }, 500);
+      setTimeout(() => {/* Lines 154-168 omitted */}, 500);
     }
   }, [calendarDate, calendarTimeSlot]);
 
@@ -346,6 +369,7 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
       const payload = {
         owner_name: ownerName.trim(),
         owner_phone: ownerPhone.trim(),
+        owner_email: ownerEmail.trim(),
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         responses: fields.map((f) => ({ field_id: f.id, value: values[`f_${f.id}`] })),
@@ -583,6 +607,10 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Owner Phone *</Text>
           <TextInput style={styles.input} value={ownerPhone} onChangeText={setOwnerPhone} placeholder="e.g. 09xxxxxxxxx" placeholderTextColor="#888" keyboardType="phone-pad" />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Owner Email</Text>
+          <TextInput style={styles.input} value={ownerEmail} onChangeText={setOwnerEmail} placeholder="Enter your email" placeholderTextColor="#888" keyboardType="email-address" autoCapitalize="none" />
         </View>
       </View>
 

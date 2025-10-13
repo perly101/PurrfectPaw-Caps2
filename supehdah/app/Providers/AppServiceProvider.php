@@ -13,7 +13,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Register our custom SocialiteServiceProvider
+        $this->app->register(\App\Providers\SocialiteServiceProvider::class);
+        
+        // Register our NotificationServiceProvider
+        $this->app->register(\App\Providers\NotificationServiceProvider::class);
     }
 
     /**

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\ClinicInfo;
+use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AppointmentController extends Controller
 {
@@ -209,8 +212,20 @@ class AppointmentController extends Controller
         
         // Store as JSON using the correct column name (notes instead of consultation_notes)
         $appointment->notes = json_encode($consultationNotes);
-        $appointment->status = 'closed';
+        $appointment->status = 'completed';  // Using 'completed' instead of 'closed' for consistency
         $appointment->save();
+        
+        // Notify clinic about the completed appointment
+        try {
+            $clinic = ClinicInfo::find($appointment->clinic_id);
+            if ($clinic) {
+                $notificationService = app(NotificationService::class);
+                $notificationService->notifyClinicAppointmentCompleted($clinic, $appointment);
+            }
+        } catch (\Exception $e) {
+            // Log the error but don't prevent the completion
+            Log::error('Failed to send appointment completion notification: ' . $e->getMessage());
+        }
         
         return redirect()->route('doctor.appointments.index')
             ->with('success', 'Consultation completed and notes saved successfully');

@@ -26,4 +26,12 @@ class Clinic extends Authenticatable
     protected $hidden = [
         'password',
     ];
+    
+    /**
+     * Get the notifications for this clinic.
+     */
+    public function notifications()
+    {
+        return $this->morphMany(Notification::class, 'notifiable');
+    }
 }

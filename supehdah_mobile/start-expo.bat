@@ -1,0 +1,3 @@
+@echo off
+echo Starting Expo Go development server...
+npx expo start

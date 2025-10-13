@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <div class="py-12 bg-gray-100 min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
             
@@ -36,40 +36,33 @@
                         </form>
                     </div>
                     
-                    {{-- Patients Table --}}
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @forelse($patients as $patient)
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="font-medium text-gray-900">{{ $patient->owner_name }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-gray-500">{{ $patient->owner_phone }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <a href="{{ route('doctor.patients.show', $patient->owner_phone) }}" class="text-blue-600 hover:text-blue-900">View History</a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="px-6 py-4 text-center text-gray-500">No patients found</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    {{-- Patients List --}}
+                    <div class="space-y-6">
+                        @forelse($patients as $patient)
+                            <div class="bg-white overflow-hidden shadow rounded-lg border">
+                                <a href="{{ route('doctor.patients.show', $patient->owner_phone) }}" class="block">
+                                    <div class="p-5 flex justify-between items-center bg-gray-50 cursor-pointer hover:bg-gray-100 transition duration-150">
+                                        <div>
+                                            <h3 class="text-lg font-medium text-gray-900">{{ $patient->owner_name }}</h3>
+                                            <p class="text-gray-500">{{ $patient->owner_phone }}</p>
+                                        </div>
+                                        <div class="text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        @empty
+                            <div class="bg-white p-6 text-center text-gray-500 rounded-lg shadow">
+                                No patients found
+                            </div>
+                        @endforelse
                     </div>
                     
                     {{-- Pagination --}}
-                    <div class="mt-4">
+                    <div class="mt-6">
                         {{ $patients->links() }}
                     </div>
                 </div>
