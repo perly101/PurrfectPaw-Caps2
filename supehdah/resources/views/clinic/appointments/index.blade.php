@@ -14,7 +14,13 @@
             
             <div class="flex-1">
                 <div class="bg-white shadow-xl rounded-lg p-8">
-                    <h1 class="text-2xl font-bold text-gray-800 mb-6">Appointment Management</h1>
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800">Appointment Management</h1>
+                        <a href="{{ route('clinic.appointments.archived') }}" 
+                           class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition duration-150">
+                            View Archived Appointments
+                        </a>
+                    </div>
                     
                     @if(session('success'))
                         <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">

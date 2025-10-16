@@ -167,14 +167,30 @@
 
             <li>
                 <a href="{{ route('clinic.appointments.index') }}"
-                   class="nav-item group flex items-center px-4 py-3 rounded-lg {{ str_starts_with($currentRoute, 'clinic.appointments.') ? 'bg-gradient-to-r from-indigo-600/50 to-indigo-700/30 text-white shadow-sm' : 'hover:text-white' }} transition-all duration-200">
-                    <div class="mr-3 flex items-center justify-center w-6 h-6 {{ str_starts_with($currentRoute, 'clinic.appointments.') ? 'text-indigo-300' : 'text-indigo-400 group-hover:text-indigo-300' }} transition-colors">
+                   class="nav-item group flex items-center px-4 py-3 rounded-lg {{ $currentRoute === 'clinic.appointments.index' ? 'bg-gradient-to-r from-indigo-600/50 to-indigo-700/30 text-white shadow-sm' : 'hover:text-white' }} transition-all duration-200">
+                    <div class="mr-3 flex items-center justify-center w-6 h-6 {{ $currentRoute === 'clinic.appointments.index' ? 'text-indigo-300' : 'text-indigo-400 group-hover:text-indigo-300' }} transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                         </svg>
                     </div>
                     <span class="font-medium">Appointments</span>
-                    @if(str_starts_with($currentRoute, 'clinic.appointments.'))
+                    @if($currentRoute === 'clinic.appointments.index')
+                        <span class="ml-auto bg-indigo-500/20 text-indigo-300 text-xs py-0.5 px-1.5 rounded-sm">Active</span>
+                    @endif
+                </a>
+            </li>
+            
+            <li>
+                <a href="{{ route('clinic.appointments.archived') }}"
+                   class="nav-item group flex items-center px-4 py-3 rounded-lg {{ $currentRoute === 'clinic.appointments.archived' ? 'bg-gradient-to-r from-indigo-600/50 to-indigo-700/30 text-white shadow-sm' : 'hover:text-white' }} transition-all duration-200">
+                    <div class="mr-3 flex items-center justify-center w-6 h-6 {{ $currentRoute === 'clinic.appointments.archived' ? 'text-indigo-300' : 'text-indigo-400 group-hover:text-indigo-300' }} transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm0 2a1 1 0 00-1 1v6a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1H5z" clip-rule="evenodd" />
+                            <path d="M11 9h2v2h-2V9zM7 9h2v2H7V9z" />
+                        </svg>
+                    </div>
+                    <span class="font-medium">Archived</span>
+                    @if($currentRoute === 'clinic.appointments.archived')
                         <span class="ml-auto bg-indigo-500/20 text-indigo-300 text-xs py-0.5 px-1.5 rounded-sm">Active</span>
                     @endif
                 </a>
@@ -210,7 +226,7 @@
                 </a>
             </li>
 
-            <li>
+            <!-- <li>
                 <a href="{{ route('clinic.patients.index') }}"
                    class="nav-item group flex items-center px-4 py-3 rounded-lg {{ str_starts_with($currentRoute, 'clinic.patients.') ? 'bg-gradient-to-r from-indigo-600/50 to-indigo-700/30 text-white shadow-sm' : 'hover:text-white' }} transition-all duration-200">
                     <div class="mr-3 flex items-center justify-center w-6 h-6 {{ str_starts_with($currentRoute, 'clinic.patients.') ? 'text-indigo-300' : 'text-indigo-400 group-hover:text-indigo-300' }} transition-colors">
@@ -223,7 +239,7 @@
                         <span class="ml-auto bg-indigo-500/20 text-indigo-300 text-xs py-0.5 px-1.5 rounded-sm">Active</span>
                     @endif
                 </a>
-            </li>
+            </li> -->
 
             <li>
                 <a href="{{ route('clinic.gallery.index') }}"

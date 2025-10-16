@@ -43,5 +43,15 @@ public function notifications()
 {
     return $this->morphMany(\App\Models\Notification::class, 'notifiable');
 }
+
+public function doctors()
+{
+    return $this->hasMany(\App\Models\Doctor::class, 'clinic_id');
+}
+
+public function appointments()
+{
+    return $this->hasMany(\App\Models\Appointment::class, 'clinic_id');
+}
     
 }

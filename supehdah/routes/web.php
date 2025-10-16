@@ -101,9 +101,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 // ========== CLINIC ROUTES ==========
 Route::middleware(['auth', 'role:clinic'])->group(function () {
     // Clinic dashboard
-    Route::get('/clinic/dashboard', function () {
-        return view('clinic.dashboard');
-    })->name('clinic.dashboard');
+    Route::get('/clinic/dashboard', [\App\Http\Controllers\Clinic\DashboardController::class, 'index'])->name('clinic.dashboard');
+    Route::get('/clinic/dashboard/stats', [\App\Http\Controllers\Clinic\DashboardController::class, 'getStats'])->name('clinic.dashboard.stats');
     
     // Availability management
     Route::get('/clinic/availability', [\App\Http\Controllers\Clinic\AvailabilityController::class, 'index'])->name('clinic.availability.index');
@@ -143,6 +142,8 @@ Route::middleware(['auth', 'role:clinic'])->group(function () {
         
         // Appointments management
         Route::get('/appointments', [\App\Http\Controllers\Clinic\AppointmentController::class, 'index'])->name('appointments.index');
+        Route::get('/appointments/archived', [\App\Http\Controllers\Clinic\AppointmentController::class, 'archivedAppointments'])->name('appointments.archived');
+        Route::get('/appointments/patient-history/{name}/{phone}', [\App\Http\Controllers\Clinic\AppointmentController::class, 'patientHistory'])->name('appointments.patient-history');
         Route::get('/appointments/{id}', [\App\Http\Controllers\Clinic\AppointmentController::class, 'show'])->name('appointments.show');
         Route::put('/appointments/{id}/status', [\App\Http\Controllers\Clinic\AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
         Route::delete('/appointments/{id}', [\App\Http\Controllers\Clinic\AppointmentController::class, 'delete'])->name('appointments.delete');

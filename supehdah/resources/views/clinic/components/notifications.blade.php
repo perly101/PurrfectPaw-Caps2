@@ -3,12 +3,15 @@
     use App\Models\Notification;
     use App\Models\ClinicInfo;
     
+    // Define how many notifications to show, default to 5 or use passed parameter
+    $notificationsLimit = $limit ?? 5;
+    
     $clinic = ClinicInfo::where('user_id', auth()->id())->first();
     
     if ($clinic) {
         $notifications = $clinic->notifications()
             ->orderBy('created_at', 'desc')
-            ->take(5)
+            ->take($notificationsLimit)
             ->get();
             
         $unreadCount = $clinic->notifications()

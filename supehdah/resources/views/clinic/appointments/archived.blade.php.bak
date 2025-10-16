@@ -1,0 +1,181 @@
+@php
+    use App\Models\ClinicInfo;
+    $clinic = $clinic ?? ClinicInfo::where('user_id', auth()->id())->first();
+@endphp
+
+<x-app-layout>
+    <div class="py-12 bg-gray-100 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
+            
+            {{-- Sidebar --}}
+            <div class="w-1/4">
+                @include('clinic.components.sidebar')
+            </div>
+            
+            <div class="flex-1">
+                <div class="bg-white shadow-xl rounded-lg p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800">Completed & Cancelled Appointments</h1>
+                        <a href="{{ route('clinic.appointments.index') }}" 
+                           class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">
+                            Active Appointments
+                        </a>
+                    </div>
+                    
+                    @if(session('success'))
+                        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
+                            <p>{{ session('success') }}</p>
+                        </div>
+                    @endif
+                    
+                    <div class="mb-4 text-sm text-gray-600">
+                        <p>Click on a patient name to view their appointment history.</p>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <div class="divide-y divide-gray-200 border rounded-lg">
+                            @forelse($patients as $patient)
+                                <div class="patient-container">
+                                    <!-- Patient Header - Clickable -->
+                                    <a href="{{ route('clinic.appointments.patient-history', ['name' => $patient->owner_name, 'phone' => $patient->owner_phone]) }}" 
+                                       class="bg-gray-50 px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition duration-150">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="text-gray-900 font-medium">{{ $patient->owner_name }}</div>
+                                            <div class="text-gray-500">{{ $patient->owner_phone }}</div>
+                                            <div class="text-xs bg-indigo-100 text-indigo-800 rounded-full px-2 py-1">
+                                                {{ $patient->appointments->count() }} appointments
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endforelse
+                                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {{ $appointment->updated_at->format('M d, Y') }}
+                                                            <br>
+                                                            {{ $appointment->updated_at->format('h:i A') }}
+                                                        </td>
+                                                        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                                                            @if($appointment->notes)
+                                                                <div class="truncate max-w-xs" x-data="{ expanded: false }">
+                                                                    <p x-show="!expanded" @click="expanded = true" class="cursor-pointer hover:text-blue-600">
+                                                                        {{ Str::limit($appointment->notes, 50) }}
+                                                                        <span class="text-xs text-blue-500">(click to expand)</span>
+                                                                    </p>
+                                                                    <div x-show="expanded" @click.away="expanded = false" class="bg-gray-50 p-2 rounded shadow-sm">
+                                                                        {{ $appointment->notes }}
+                                                                    </div>
+                                                                </div>
+                                                            @else
+                                                                <span class="text-gray-400 italic">No notes</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                            <button data-id="{{ $appointment->id }}" 
+                                                               class="view-details-btn text-blue-600 hover:text-blue-900 cursor-pointer">View Details</button>
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                                            No appointments found for this patient.
+                                                        </td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="px-6 py-4 text-center text-gray-500">
+                                    No completed or cancelled appointments found.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        {{ $patients->links() }}
+                    </div>
+                </div>
+                
+                {{-- Appointment Details Modal --}}
+                <div id="appointment-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+                    <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-screen overflow-y-auto absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800">Appointment Details</h3>
+                                <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="appointment-content">
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>
+                    [x-cloak] { display: none !important; }
+                </style>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('appointment-detail-modal');
+            const closeModal = document.getElementById('close-modal');
+            const modalContent = document.getElementById('appointment-content');
+            
+            // Set up event listeners for all view details buttons
+            document.querySelectorAll('.view-details-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const appointmentId = this.getAttribute('data-id');
+                    
+                    // Show loading state
+                    modalContent.innerHTML = 'Loading appointment details...';
+                    modal.classList.remove('hidden');
+                    
+                    // Fetch appointment details
+                    fetch(`/clinic/appointments/${appointmentId}?ajax=true`)
+                        .then(response => response.text())
+                        .then(data => {
+                            modalContent.innerHTML = data;
+                        })
+                        .catch(error => {
+                            modalContent.innerHTML = 'Error loading appointment details. Please try again.';
+                            console.error('Error:', error);
+                        });
+                });
+            });
+            
+            if (closeModal) {
+                closeModal.addEventListener('click', function() {
+                    modal.classList.add('hidden');
+                });
+            }
+            
+            // Close modal if clicking outside
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+            
+            // Add keyboard event to close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</x-app-layout>
