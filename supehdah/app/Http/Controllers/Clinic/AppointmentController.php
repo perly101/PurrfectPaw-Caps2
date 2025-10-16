@@ -23,20 +23,76 @@ class AppointmentController extends Controller
     {
         $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
         $appointments = Appointment::where('clinic_id', $clinic->id)
+            ->whereNotIn('status', ['completed', 'cancelled']) // Exclude completed and cancelled
             ->with('doctor') // Eager load doctor relationship
             ->orderByRaw("CASE 
                 WHEN status = 'pending' THEN 1
                 WHEN status = 'assigned' THEN 2
                 WHEN status = 'confirmed' THEN 3
-                WHEN status = 'completed' THEN 4
-                WHEN status = 'closed' THEN 5
-                WHEN status = 'cancelled' THEN 6
-                ELSE 7 END")
+                WHEN status = 'closed' THEN 4
+                ELSE 5 END")
             ->orderBy('created_at', 'desc')
             ->paginate(15);
             
         return view('clinic.appointments.index', compact('appointments', 'clinic'));
     }
+    
+    /**
+     * Display a listing of completed and cancelled appointments.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function archivedAppointments()
+    {
+        $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
+        
+        // Get all distinct patient names that have completed/cancelled appointments
+        $patients = Appointment::where('clinic_id', $clinic->id)
+            ->whereIn('status', ['completed', 'cancelled'])
+            ->select('owner_name', 'owner_phone')
+            ->distinct()
+            ->orderBy('owner_name')
+            ->get();
+            
+        // For each patient, get their appointments
+        foreach ($patients as $patient) {
+            $patient->appointments = Appointment::where('clinic_id', $clinic->id)
+                ->where('owner_name', $patient->owner_name)
+                ->where('owner_phone', $patient->owner_phone)
+                ->whereIn('status', ['completed', 'cancelled'])
+                ->with('doctor') // Eager load doctor relationship
+                ->select(
+                    'id', 'clinic_id', 'doctor_id', 'owner_name', 'owner_phone', 
+                    'appointment_date', 'appointment_time', 'status', 
+                    'notes', 'updated_at', 'created_at'
+                )
+                ->orderBy('updated_at', 'desc')
+                ->get();
+        }
+        
+        // Paginate the patients list
+        $perPage = 15;
+        $currentPage = request()->get('page', 1);
+        $pagedPatients = new \Illuminate\Pagination\LengthAwarePaginator(
+            $patients->forPage($currentPage, $perPage),
+            $patients->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+            
+        return view('clinic.appointments.archived', [
+            'patients' => $pagedPatients,
+            'clinic' => $clinic
+        ]);
+    }
+    
+    /**
+     * Show appointment details
+     * 
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     
     /**
      * Delete an appointment.
@@ -74,8 +130,13 @@ class AppointmentController extends Controller
     {
         $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
         $appointment = Appointment::where('clinic_id', $clinic->id)
-            ->with(['customValues.field'])
+            ->with(['customValues.field', 'doctor'])
             ->findOrFail($id);
+            
+        // Check if it's an AJAX request
+        if (request()->ajax() || request()->has('ajax')) {
+            return view('clinic.appointments.partials.appointment_details', compact('appointment', 'clinic'));
+        }
             
         return view('clinic.appointments.show', compact('appointment', 'clinic'));
     }
@@ -169,10 +230,10 @@ class AppointmentController extends Controller
         $appointment = Appointment::where('clinic_id', $clinic->id)->findOrFail($id);
         
         $request->validate([
-            'consultation_notes' => 'required|string'
+            'notes' => 'required|string'
         ]);
         
-        $appointment->consultation_notes = $request->consultation_notes;
+        $appointment->notes = $request->notes;
         
         // If the appointment is in completed status, update it to closed
         if ($appointment->status === 'completed') {
@@ -183,5 +244,38 @@ class AppointmentController extends Controller
         
         return redirect()->route('clinic.appointments.show', $id)
             ->with('success', 'Consultation notes added successfully');
+    }
+    
+    /**
+     * Display appointment history for a specific patient
+     *
+     * @param string $name Patient name
+     * @param string $phone Patient phone
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+     */
+    public function patientHistory($name, $phone)
+    {
+        $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
+        
+        // Get patient info
+        $patientInfo = Appointment::where('clinic_id', $clinic->id)
+            ->where('owner_name', $name)
+            ->where('owner_phone', $phone)
+            ->first();
+            
+        if (!$patientInfo) {
+            return redirect()->route('clinic.appointments.archived')
+                ->with('error', 'Patient not found');
+        }
+        
+        // Get all appointments for this patient
+        $appointments = Appointment::where('clinic_id', $clinic->id)
+            ->where('owner_name', $name)
+            ->where('owner_phone', $phone)
+            ->with(['doctor'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+            
+        return view('clinic.appointments.patient-history', compact('patientInfo', 'appointments', 'clinic'));
     }
 }

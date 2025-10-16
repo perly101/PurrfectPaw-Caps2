@@ -162,7 +162,7 @@
                         <form action="{{ url('/clinic/appointments/' . $appointment->id . '/add-notes') }}" method="POST">
                             @csrf
                             <div class="mb-4">
-                                <textarea name="consultation_notes" rows="4" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="Enter consultation notes here...">{{ $appointment->consultation_notes }}</textarea>
+                                <textarea name="notes" rows="4" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="Enter consultation notes here...">{{ $appointment->notes }}</textarea>
                             </div>
                             <div class="flex justify-end">
                                 <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">
@@ -174,11 +174,59 @@
                     @endif
 
                     <!-- Display Consultation Notes if Available -->
-                    @if($appointment->consultation_notes)
+                    @if($appointment->notes)
                     <div class="bg-green-50 p-4 rounded-lg mb-6 border border-green-100">
                         <h2 class="text-lg font-medium text-green-800 mb-2">Consultation Notes</h2>
                         <div class="p-3 bg-white rounded shadow-sm">
-                            {{ $appointment->consultation_notes }}
+                            @php
+                                $notesData = json_decode($appointment->notes, true);
+                            @endphp
+                            @if(is_array($notesData))
+                                <div class="space-y-4">
+                                    @if(isset($notesData['chief_complaint']))
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Chief Complaint:</h4>
+                                        <p class="ml-4 mt-1">{{ $notesData['chief_complaint'] }}</p>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($notesData['history_observations']))
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">History & Observations:</h4>
+                                        <p class="ml-4 mt-1">{{ $notesData['history_observations'] }}</p>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($notesData['examination_findings']))
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Examination Findings:</h4>
+                                        <p class="ml-4 mt-1">{{ $notesData['examination_findings'] }}</p>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($notesData['diagnosis']))
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Diagnosis:</h4>
+                                        <p class="ml-4 mt-1">{{ $notesData['diagnosis'] }}</p>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($notesData['plan_recommendations']))
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Plan & Recommendations:</h4>
+                                        <p class="ml-4 mt-1">{{ $notesData['plan_recommendations'] }}</p>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($notesData['completed_at']))
+                                    <div class="text-sm text-gray-500 mt-4 border-t pt-2">
+                                        Completed on: {{ \Carbon\Carbon::parse($notesData['completed_at'])->format('F j, Y \a\t g:i A') }}
+                                    </div>
+                                    @endif
+                                </div>
+                            @else
+                                <p class="whitespace-pre-line">{{ $appointment->notes }}</p>
+                            @endif
                         </div>
                     </div>
                     @endif

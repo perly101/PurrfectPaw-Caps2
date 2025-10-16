@@ -125,4 +125,13 @@ class Appointment extends Model
     {
         return $this->belongsTo(Doctor::class, 'doctor_id');
     }
+    
+    /**
+     * This is a convenience method that returns the appointment itself as "patient"
+     * since the patient information is stored directly in the appointments table
+     */
+    public function patient()
+    {
+        return $this->belongsTo(self::class, 'id', 'id');
+    }
 }
