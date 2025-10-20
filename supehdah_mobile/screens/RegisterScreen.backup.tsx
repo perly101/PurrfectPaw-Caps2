@@ -261,7 +261,7 @@ export default function RegisterScreen(): React.ReactElement {
       {/* Wave background at the top */}
       <View style={styles.topWave}>
         <Image 
-          source={require('../assets/pic0.jpg')} 
+          source={require('../assets/pic4.jpg')} 
           style={styles.wavePattern}
           resizeMode="cover"
         />
@@ -288,65 +288,55 @@ export default function RegisterScreen(): React.ReactElement {
               <View style={styles.logoContainer}>
                 <Image source={require('../assets/purrfectpaw_logo.png')} style={styles.logoImage} />
               </View>
-              <Text style={styles.headerTitle}>Create Accounts</Text>
+              <Text style={styles.headerTitle}>Create Account</Text>
               <Text style={styles.headerSubtitle}>Join PurrfectPaw today</Text>
             </View>
 
             {/* First Name Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="First Name *"
-                autoCapitalize="words"
-                value={firstName}
-                onChangeText={setFirstName}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="First Name *"
+              autoCapitalize="words"
+              value={firstName}
+              onChangeText={setFirstName}
+            />
 
             {/* Middle Name Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Middle Name (optional)"
-                autoCapitalize="words"
-                value={middleName}
-                onChangeText={setMiddleName}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Middle Name (optional)"
+              autoCapitalize="words"
+              value={middleName}
+              onChangeText={setMiddleName}
+            />
 
             {/* Last Name Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Last Name *"
-                autoCapitalize="words"
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Last Name *"
+              autoCapitalize="words"
+              value={lastName}
+              onChangeText={setLastName}
+            />
 
             {/* Email Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Email *"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Email *"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
 
             {/* Phone Number Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Phone Number"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              keyboardType="phone-pad"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
 
             {/* Gender Selection */}
             <TouchableOpacity 
@@ -377,7 +367,7 @@ export default function RegisterScreen(): React.ReactElement {
             {/* Password Input */}
             <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.inputField}
+                style={styles.input}
                 placeholder="Password *"
                 secureTextEntry={!showPassword}
                 value={password}
@@ -391,7 +381,7 @@ export default function RegisterScreen(): React.ReactElement {
             {/* Confirm Password Input */}
             <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.inputField}
+                style={styles.input}
                 placeholder="Confirm Password"
                 secureTextEntry={!showPasswordConfirmation}
                 value={passwordConfirmation}
@@ -414,9 +404,9 @@ export default function RegisterScreen(): React.ReactElement {
                 <Text style={styles.loginLink}>Login here</Text>
               </TouchableOpacity>
             </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </View>
+        </KeyboardAvoidingView>
+      </ScrollView>
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -490,7 +480,7 @@ export default function RegisterScreen(): React.ReactElement {
           maximumDate={new Date()} // Cannot select future dates
         />
       )}
-    </TouchableOpacity>
+    </ImageBackground>
   );
 }
 
@@ -614,18 +604,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 18,
     paddingRight: 50,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: DARK,
-    borderWidth: 1.2,
-    borderColor: '#E8E8E8',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-  },
-  inputField: {
-    width: '100%',
-    paddingHorizontal: 18,
     paddingVertical: 15,
     fontSize: 16,
     color: DARK,

@@ -51,7 +51,7 @@ class GoogleController extends Controller
                 }
                 
                 Auth::login($existingUser);
-                return redirect()->intended('/');
+                return $this->redirectBasedOnRole($existingUser);
             }
             
             // Create new user
@@ -73,7 +73,7 @@ class GoogleController extends Controller
             event(new Registered($newUser));
             
             Auth::login($newUser);
-            return redirect()->intended('/');
+            return $this->redirectBasedOnRole($newUser);
             
         } catch (Exception $e) {
             return redirect()->route('login')
@@ -95,5 +95,24 @@ class GoogleController extends Controller
             'first_name' => $nameParts[0],
             'last_name' => isset($nameParts[1]) ? $nameParts[1] : '',
         ];
+    }
+    
+    /**
+     * Redirect the user to the appropriate dashboard based on their role.
+     *
+     * @param \App\Models\User $user
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    protected function redirectBasedOnRole($user)
+    {
+        if ($user->role === 'admin') {
+            return redirect()->intended('/admin/dashboard');
+        } elseif ($user->role === 'clinic') {
+            return redirect()->intended('/clinic/dashboard');
+        } elseif ($user->role === 'doctor') {
+            return redirect()->intended('/doctor/dashboard');
+        } else {
+            return redirect()->intended('/dashboard');
+        }
     }
 }

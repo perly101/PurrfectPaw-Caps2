@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 
 // Use only a single fixed API base URL
 const API_BASE_URLS = [
-  'http://192.168.1.8:8000/api', // Local network - update with your actual IP
+  'http://192.168.1.5:8000/api', // Local network - update with your actual IP
   'http://localhost:8000/api'    // For web debugging
 ];
 
@@ -411,6 +411,20 @@ export interface AppointmentResponse {
   data?: any;
   appointment_id?: number | string;
   error?: string;
+}
+
+// Request a password reset link
+export const forgotPassword = async (email: string): Promise<any> => {
+  try {
+    const response = await API.post('/forgot-password', { email });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error requesting password reset:', error);
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
 }
 
 export const bookAppointment = async (clinicId: number, data: AppointmentBookingData): Promise<AppointmentResponse> => {

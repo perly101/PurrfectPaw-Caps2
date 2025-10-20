@@ -60,7 +60,7 @@ export default function HomeScreen() {
       }
       
       setLoadingUser(true);
-      const res = await API.get('me');
+      const res = await API.get('/me');
       setUserName(res.data?.name ?? null);
     } catch (e: any) {
       // Only log detailed errors for non-auth issues to reduce console spam

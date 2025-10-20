@@ -16,6 +16,7 @@ use App\Http\Controllers\API\AvailabilityApiController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [\App\Http\Controllers\API\PasswordResetController::class, 'sendResetLinkEmail']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);

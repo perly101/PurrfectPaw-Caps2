@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API } from '../src/api';
+import { useAuth } from '../src/contexts/AuthContext';
 
 const PINK = '#FF6B8A';
 const PURPLE = '#6C5CE7';
@@ -28,6 +29,7 @@ const MUTED = '#7B7B8C';
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  const { signOut } = useAuth();
   const [firstName, setFirstName] = React.useState<string | null>(null);
   const [middleName, setMiddleName] = React.useState<string | null>(null);
   const [lastName, setLastName] = React.useState<string | null>(null);
@@ -148,11 +150,10 @@ export default function SettingsScreen() {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem('token');
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
+          // Use the auth context to sign out
+          await signOut();
+          
+          // Navigation will be handled automatically by App.tsx based on auth state
         },
       },
     ]);

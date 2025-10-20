@@ -15,6 +15,7 @@ use App\Http\Controllers\User\PetController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\EmailTestController;
+use App\Http\Controllers\MailTestController;
 use App\Http\Controllers\Doctor\DashboardController as DoctorDashboardController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Doctor\PatientController as DoctorPatientController;
@@ -31,14 +32,19 @@ use App\Http\Controllers\Doctor\ProfileController as DoctorProfileController;
 |
 */
 
-// Public route
-Route::get('/', function () {
-    return view('/auth/login');
-});
+// Public route: Landing page
+use App\Http\Controllers\LandingController;
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 // Google OAuth Routes
 Route::get('/auth/google', [App\Http\Controllers\Auth\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('/auth/google/callback', [App\Http\Controllers\Auth\GoogleController::class, 'handleGoogleCallback']);
+
+// Mail Test Routes (admin only)
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/test-email', [MailTestController::class, 'showForm'])->name('test-email');
+    Route::post('/test-email', [MailTestController::class, 'sendTest'])->name('test-email.send');
+});
 
 // User dashboard (accessible to all authenticated users)
 Route::get('/dashboard', function () {

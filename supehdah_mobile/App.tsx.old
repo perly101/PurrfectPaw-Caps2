@@ -1,10 +1,9 @@
 // Import polyfills first, before any other imports
 import './src/navigationPolyfills';
 
-import React, { useRef } from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import React, { useRef, useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { screenTransitionOptions } from './src/utils/pageTransitions';
 import LoginScreen from './screens/LoginScreen';
 import PersonalTabs from './navigation/PersonalTabs';
 import EditProfileScreen from './screens/EditProfileScreen';
@@ -13,11 +12,10 @@ import RegisterScreen from './screens/RegisterScreen';
 import BookAppointmentScreen from './screens/BookAppointmentScreen';
 import OTPVerificationScreen from './screens/OTPVerificationScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
-import { setNavigationRef } from './src/api';
+import { setNavigationRef, API, isAuthenticated } from './src/api';
 import { NotificationService } from './src/services/NotificationService';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-// Import renamed component
-import AppSplashScreen from './screens/SplashScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -47,6 +45,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
   // Create a navigation reference to be used for authentication redirects
   const navigationRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Initialize notifications and handle errors
   React.useEffect(() => {
@@ -71,21 +71,74 @@ export default function App() {
       NotificationService.cleanUp();
     };
   }, []);
+  
+  // Check for existing auth token on app start
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        // Try to get the token from any of the storage keys we use
+        const token = await AsyncStorage.getItem('token') || 
+                      await AsyncStorage.getItem('userToken') || 
+                      await AsyncStorage.getItem('accessToken');
+        
+        if (token) {
+          console.log('� Found existing auth token:', token.substring(0, 10) + '...');
+          
+          // Set the token in API headers
+          API.defaults.headers = API.defaults.headers || {};
+          API.defaults.headers.common = API.defaults.headers.common || {};
+          API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Ensure token is saved to all our storage keys for consistency
+          await AsyncStorage.setItem('token', token);
+          await AsyncStorage.setItem('userToken', token);
+          
+          try {
+            // Validate token by making a request to the user endpoint
+            console.log('🔄 Validating token with API request...');
+            const userResponse = await API.get('/user');
+            
+            console.log('✅ Token validation response:', userResponse.status);
+            if (userResponse.status === 200 && userResponse.data) {
+              console.log('✅ Token validation successful, auto-login');
+              
+              // Store user data in AsyncStorage for offline access
+              await AsyncStorage.setItem('user', JSON.stringify(userResponse.data));
+              
+              setIsAuthenticated(true);
+            } else {
+              console.log('❌ Token validation failed, redirecting to login');
+              await AsyncStorage.multiRemove(['token', 'userToken', 'accessToken', 'user']);
+              setIsAuthenticated(false);
+            }
+          } catch (error) {
+            console.log('❌ Error validating token:', error);
+            // Token might be invalid or expired
+            await AsyncStorage.multiRemove(['token', 'userToken', 'accessToken', 'user']);
+            setIsAuthenticated(false);
+          }
+        } else {
+          console.log('❌ No auth token found, user needs to login');
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.log('❌ Error checking auth status:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuthStatus();
+  }, []);
 
-  return (
-    <AuthProvider>
-      <AppNavigator navigationRef={navigationRef} />
-    </AuthProvider>
-  );
-}
-
-// Separate component for navigation to access auth context
-const AppNavigator: React.FC<{ navigationRef: React.MutableRefObject<any> }> = ({ navigationRef }) => {
-  const { user, loading } = useAuth();
-
-  // Show splash screen while checking for authentication
-  if (loading) {
-    return <AppSplashScreen />;
+  // If app is still checking auth status, show loading screen
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4e54c8" />
+      </View>
+    );
   }
 
   return (
@@ -108,52 +161,31 @@ const AppNavigator: React.FC<{ navigationRef: React.MutableRefObject<any> }> = (
       }}
     >
       <Stack.Navigator 
-        initialRouteName={user ? "PersonalTabs" : "Login"} 
-        screenOptions={{ 
-          headerShown: false,
-          ...screenTransitionOptions.stackTransition,
-          presentation: 'card',
-          animationTypeForReplace: 'push',
-        }}
+        initialRouteName={isAuthenticated ? "PersonalTabs" : "Login"} 
+        screenOptions={{ headerShown: false }}
       >
-        {user ? (
-          // Authenticated routes
-          <>
-            <Stack.Screen name="PersonalTabs" component={PersonalTabs} />
-            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-            <Stack.Screen name="ClinicTabs" component={ClinicTabs} />
-            <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
-          </>
-        ) : (
-          // Unauthenticated routes
-          <>
-            <Stack.Screen 
-              name="Login" 
-              component={LoginScreen} 
-              options={screenTransitionOptions.fadeTransition}
-            />
-            <Stack.Screen 
-              name="Register" 
-              component={RegisterScreen}
-              options={screenTransitionOptions.stackTransition}
-            />
-            <Stack.Screen 
-              name="ForgotPassword" 
-              component={ForgotPasswordScreen}
-              options={screenTransitionOptions.modalTransition}
-            />
-          </>
-        )}
-        {/* Shared routes (available in both authenticated and unauthenticated states) */}
-        <Stack.Screen 
-          name="OTPVerification" 
-          component={OTPVerificationScreen}
-          options={screenTransitionOptions.fadeTransition}
-        />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="PersonalTabs" component={PersonalTabs} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="ClinicTabs" component={ClinicTabs} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+        <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
+        {/* Connection test screen removed from initial routing but kept for development purposes */}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+});
 
 
 // import React, { useState } from 'react';
