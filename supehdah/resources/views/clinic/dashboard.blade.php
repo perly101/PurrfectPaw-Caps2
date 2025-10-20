@@ -24,6 +24,33 @@
                 
                 {{-- Stats Cards --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <!-- Subscription Status -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 rounded-full bg-green-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                                </svg>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">Subscription</p>
+                                @if($subscription && $subscription->status == 'active')
+                                    <p class="text-xl font-semibold text-green-600">Active</p>
+                                @elseif($subscription && $subscription->status == 'pending_admin_confirmation')
+                                    <p class="text-xl font-semibold text-yellow-600">Pending</p>
+                                @else
+                                    <p class="text-xl font-semibold text-red-600">Inactive</p>
+                                @endif
+                            </div>
+                        </div>
+                        <a href="{{ route('clinic.subscription.receipt') }}" class="text-sm text-green-600 hover:text-green-800 flex items-center">
+                            <span>View subscription details</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                    
                     <!-- Doctor Count -->
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <div class="flex items-center justify-between mb-4">

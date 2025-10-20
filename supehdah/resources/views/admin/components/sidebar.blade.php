@@ -76,8 +76,33 @@
                     <span>Clinic Management</span>
                 </a>
             </li>
-
             
+            <p class="px-4 text-xs font-semibold text-indigo-300/70 uppercase tracking-wider mt-6 mb-2">Payment Management</p>
+            
+            <li>
+                <a href="{{ route('admin.subscriptions.pending') }}"
+                   class="flex items-center px-4 py-3 rounded-lg {{ $currentRoute === 'admin.subscriptions.pending' ? 'bg-indigo-700/40 text-white' : 'hover:bg-indigo-800/40 hover:text-white' }} transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {{ $currentRoute === 'admin.subscriptions.pending' ? 'text-indigo-300' : 'text-indigo-400' }} mr-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                        <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Pending Payments</span>
+                    <!-- Add notification badge if there are pending payments -->
+                    <span class="ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full" id="pending-payment-count">
+                        <!-- Count will be populated by JavaScript -->
+                    </span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="{{ route('admin.subscriptions.all') }}"
+                   class="flex items-center px-4 py-3 rounded-lg {{ $currentRoute === 'admin.subscriptions.all' ? 'bg-indigo-700/40 text-white' : 'hover:bg-indigo-800/40 hover:text-white' }} transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {{ $currentRoute === 'admin.subscriptions.all' ? 'text-indigo-300' : 'text-indigo-400' }} mr-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>All Transactions</span>
+                </a>
+            </li>
             
             <p class="px-4 text-xs font-semibold text-indigo-300/70 uppercase tracking-wider mt-6 mb-2">Preferences</p>
 
@@ -145,3 +170,32 @@
         </div>
     </div>
 </div>
+
+<script>
+    // You can add AJAX call to fetch the count of pending payments
+    document.addEventListener('DOMContentLoaded', function() {
+        // For now, we'll manually set this
+        // In production, you would fetch this from your backend
+        
+        // Check if element exists first
+        const pendingPaymentCount = document.getElementById('pending-payment-count');
+        if (pendingPaymentCount) {
+            // Example: fetch('/api/pending-payment-count')
+            //   .then(response => response.json())
+            //   .then(data => {
+            //     pendingPaymentCount.textContent = data.count;
+            //     pendingPaymentCount.style.display = data.count > 0 ? 'inline-flex' : 'none';
+            //   });
+            
+            // For now, we'll just display a static count or hide it
+            // You can implement the actual count in your backend
+            @php
+                $pendingCount = \App\Models\Subscription::where('status', 'pending_admin_confirmation')->count();
+            @endphp
+            
+            const count = {{ $pendingCount }};
+            pendingPaymentCount.textContent = count;
+            pendingPaymentCount.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+    });
+</script>

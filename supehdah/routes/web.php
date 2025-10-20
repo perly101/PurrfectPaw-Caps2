@@ -68,6 +68,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/users/bulk', [AdminController::class, 'bulkAction'])->name('admin.users.bulk');
     Route::get('/admin/users/export', [AdminController::class, 'exportUsers'])->name('admin.users.export');
     
+    // Subscription management
+    Route::get('/admin/subscriptions/pending', [AdminController::class, 'pendingSubscriptions'])->name('admin.subscriptions.pending');
+    Route::get('/admin/subscriptions/all', [AdminController::class, 'allSubscriptions'])->name('admin.subscriptions.all');
+    Route::get('/admin/subscriptions/{id}', [AdminController::class, 'showSubscription'])->name('admin.subscriptions.show');
+    Route::post('/admin/subscriptions/confirm/{id}', [App\Http\Controllers\FakePaymentController::class, 'adminConfirm'])->name('admin.subscriptions.confirm');
+    Route::post('/admin/subscriptions/{id}/email', [AdminController::class, 'emailSubscriptionReceipt'])->name('admin.subscriptions.email');
+    
     // Admin settings
     Route::get('/admin/settings', [AdminController::class, 'settings'])->name('admin.settings');
     Route::post('/admin/settings', [AdminController::class, 'updateSettings'])->name('admin.updateSettings');
@@ -122,6 +129,10 @@ Route::middleware(['auth', 'role:clinic'])->group(function () {
     Route::get('/clinic/gallery', [GalleryController::class, 'index'])->name('clinic.gallery.index');
     Route::post('/clinic/gallery', [GalleryController::class, 'store'])->name('clinic.gallery.store');
     Route::delete('/clinic/gallery/{id}', [GalleryController::class, 'destroy'])->name('clinic.gallery.delete');
+    
+    // Subscription management
+    Route::get('/clinic/subscription/receipt', [\App\Http\Controllers\Clinic\SubscriptionController::class, 'showReceipt'])->name('clinic.subscription.receipt');
+    Route::post('/clinic/subscription/receipt/email', [\App\Http\Controllers\Clinic\SubscriptionController::class, 'emailReceipt'])->name('clinic.subscription.email');
     
     // Field management
     Route::get('/clinic/fields', [ClinicFieldController::class, 'index'])->name('clinic.fields.index');

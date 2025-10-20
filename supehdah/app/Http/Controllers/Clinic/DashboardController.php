@@ -50,6 +50,11 @@ class DashboardController extends Controller
         $patientCount = DB::table('users')
             ->where('role', 'user')
             ->count();
+        
+        // Get current subscription
+        $subscription = \App\Models\Subscription::where('clinic_id', $clinic->id)
+            ->latest()
+            ->first();
             
         // Get time period for graph (default to weekly)
         $period = $request->input('period', 'weekly');
@@ -65,7 +70,8 @@ class DashboardController extends Controller
             'completedAppointmentsCount',
             'patientCount',
             'period',
-            'appointmentStats'
+            'appointmentStats',
+            'subscription'
         ));
     }
     

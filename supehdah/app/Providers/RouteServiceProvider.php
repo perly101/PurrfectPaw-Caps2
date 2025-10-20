@@ -48,13 +48,13 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
 
             Route::middleware('web')
-    ->group(base_path('routes/web.php'));
+                ->group(base_path('routes/clinic_registration.php'));
 
-Route::middleware(['auth', 'role:user'])
-    ->prefix('user')->group(base_path('routes/personal.php'));
+            Route::middleware(['auth', 'role:user'])
+                ->prefix('user')->group(base_path('routes/personal.php'));
 
-Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')->group(base_path('routes/admin.php'));
+            Route::middleware(['auth', 'role:admin'])
+                ->prefix('admin')->group(base_path('routes/admin.php'));
 
         });
     }

@@ -52,24 +52,33 @@ class ClinicRegisterController extends Controller
         $step1 = Session::get('clinic_data_step1');
 
         if (!$step1) {
-            return redirect()->route('clinic.register.step1')->withErrors(['session' => 'Please complete step 1 first.']);
+            return redirect()->route('clinic.register.select-plan')->withErrors(['session' => 'Please complete step 1 first.']);
         }
 
-        $clinic = Clinic::create([
-            'logo' => $step1['profile_picture'] ?? null,
-            'name' => $step1['name'],
-            'address' => $step1['address'],
-            'contact_number' => $step1['contact_number'],
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        User::create([
-            'first_name' => $clinic->name,
+        // Create the user first
+        $user = User::create([
+            'first_name' => $step1['name'],
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'clinic',
         ]);
+
+        // Then create clinic with user connection
+        $clinic = Clinic::create([
+            'logo' => $step1['profile_picture'] ?? null,
+            'clinic_name' => $step1['name'],
+            'address' => $step1['address'],
+            'contact_number' => $step1['contact_number'],
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'user_id' => $user->id,
+            'owner_id' => $user->id,
+            'status' => 'active',
+        ]);
+        
+        // Update user with clinic ID
+        $user->clinic_id = $clinic->id;
+        $user->save();
 
         Session::forget('clinic_data_step1');
 

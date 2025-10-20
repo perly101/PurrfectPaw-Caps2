@@ -27,6 +27,67 @@
                 </div>
             </div>
 
+                {{-- Transaction Management Card --}}
+                <div class="mb-6">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 flex items-center shadow-md rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-medium text-blue-800">Transaction Management</h3>
+                            </div>
+                            <div class="mt-1">
+                                <p class="text-sm text-blue-700">
+                                    Manage clinic subscription transactions and payment history.
+                                </p>
+                            </div>
+                            <div class="mt-3 flex space-x-2">
+                                <a href="{{ route('admin.subscriptions.all') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium inline-flex items-center transition duration-150">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                    </svg>
+                                    View All Transactions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                @if($pendingPaymentsCount > 0)
+                {{-- Pending Payments Alert --}}
+                <div class="mb-6">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 flex items-center shadow-md rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-medium text-yellow-800">Pending Payments Require Attention</h3>
+                                <span class="ml-2 bg-yellow-200 text-yellow-800 text-sm font-semibold px-2.5 py-0.5 rounded-full">{{ $pendingPaymentsCount }}</span>
+                            </div>
+                            <div class="mt-1">
+                                <p class="text-sm text-yellow-700">
+                                    {{ $pendingPaymentsCount }} {{ Str::plural('clinic', $pendingPaymentsCount) }} {{ $pendingPaymentsCount == 1 ? 'has' : 'have' }} made payments that require your confirmation.
+                                </p>
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ route('admin.subscriptions.pending') }}" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg text-sm font-medium inline-flex items-center transition duration-150">
+                                    <span>Review Pending Payments</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                
                 {{-- Stats Overview --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
                     <div class="bg-white shadow-lg rounded-xl p-4 md:p-6 border border-gray-200">

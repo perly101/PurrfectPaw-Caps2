@@ -39,7 +39,7 @@ class User extends Authenticatable implements MustVerifyEmail
 protected $fillable = [
     'first_name', 'middle_name', 'last_name', 'email', 'phone_number', 
     'gender', 'birthday', 'password', 'role', 'google_id', 'google_token',
-    'google_refresh_token', 'avatar', 'device_token',
+    'google_refresh_token', 'avatar', 'device_token', 'clinic_id',
 ];
 
     /**
@@ -65,6 +65,22 @@ protected $fillable = [
 public function clinicInfo()
 {
     return $this->hasOne(ClinicInfo::class, 'user_id');
+}
+
+/**
+ * Get the clinic that this user belongs to (if staff).
+ */
+public function clinic()
+{
+    return $this->belongsTo(Clinic::class, 'clinic_id');
+}
+
+/**
+ * Get the clinics owned by this user.
+ */
+public function ownedClinics()
+{
+    return $this->hasMany(Clinic::class, 'owner_id');
 }
 
 public function doctorProfile()

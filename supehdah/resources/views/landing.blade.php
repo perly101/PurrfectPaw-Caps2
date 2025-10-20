@@ -278,7 +278,7 @@
                             </li>
                         </ul>
                         <div class="mt-8">
-                            <a href="{{ route('register') }}" class="block w-full bg-purple-500 text-white text-center px-4 py-3 rounded-md font-semibold hover:bg-purple-600 transition">
+                            <a href="{{ route('clinic.register.select-plan', ['plan' => 'monthly']) }}" class="block w-full bg-purple-500 text-white text-center px-4 py-3 rounded-md font-semibold hover:bg-purple-600 transition">
                                 Get Started Monthly
                             </a>
                         </div>
@@ -330,7 +330,7 @@
                             </li>
                         </ul>
                         <div class="mt-8">
-                            <a href="{{ route('register') }}" class="block w-full bg-purple-500 text-white text-center px-4 py-3 rounded-md font-semibold hover:bg-purple-600 transition">
+                            <a href="{{ route('clinic.register.select-plan', ['plan' => 'yearly']) }}" class="block w-full bg-purple-500 text-white text-center px-4 py-3 rounded-md font-semibold hover:bg-purple-600 transition">
                                 Get Started Annually
                             </a>
                         </div>

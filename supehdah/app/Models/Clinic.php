@@ -18,9 +18,10 @@ class Clinic extends Authenticatable
         'clinic_name',
         'address',
         'contact_number',
-        'email',
         'password',
         'user_id',
+        'owner_id',
+        'status'
     ];
 
     protected $hidden = [
@@ -33,5 +34,21 @@ class Clinic extends Authenticatable
     public function notifications()
     {
         return $this->morphMany(Notification::class, 'notifiable');
+    }
+    
+    /**
+     * Get the user that owns the clinic.
+     */
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+    
+    /**
+     * Get all staff users (including owner) associated with this clinic.
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class, 'clinic_id');
     }
 }

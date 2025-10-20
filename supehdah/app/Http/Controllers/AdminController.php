@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ClinicInfo;
+use App\Models\Subscription;
 use App\Exports\UsersExport;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,123 @@ class AdminController extends Controller
     // Admin dashboard
     public function dashboard()
     {
-        return view('admin.dashboard');
+        // Get counts for dashboard
+        $activeClinicCount = ClinicInfo::where('status', 'active')->count();
+        $pendingPaymentsCount = \App\Models\Subscription::where('status', 'pending_admin_confirmation')->count();
+        $totalUsersCount = User::count();
+        
+        // Get recent pending payments
+        $recentPendingPayments = \App\Models\Subscription::with('clinic.owner')
+            ->where('status', 'pending_admin_confirmation')
+            ->latest()
+            ->take(5)
+            ->get();
+            
+        return view('admin.dashboard', compact(
+            'activeClinicCount', 
+            'pendingPaymentsCount', 
+            'totalUsersCount',
+            'recentPendingPayments'
+        ));
+    }
+    
+    /**
+     * Show pending subscription payments
+     */
+    public function pendingSubscriptions()
+    {
+        $pendingSubscriptions = \App\Models\Subscription::with('clinic.owner')
+            ->where('status', 'pending_admin_confirmation')
+            ->latest()
+            ->paginate(10);
+            
+        return view('admin.subscriptions.pending', compact('pendingSubscriptions'));
+    }
+    
+    /**
+     * Show subscription details
+     */
+    public function showSubscription($id)
+    {
+        $subscription = \App\Models\Subscription::with('clinic.owner')
+            ->findOrFail($id);
+            
+        return view('admin.subscriptions.details', compact('subscription'));
+    }
+    
+    /**
+     * Email subscription receipt to the clinic
+     */
+    public function emailSubscriptionReceipt($id)
+    {
+        // Find the subscription with related clinic and owner information
+        $subscription = \App\Models\Subscription::with('clinic.owner')
+            ->findOrFail($id);
+            
+        // Ensure we have a clinic and owner data
+        if (!$subscription->clinic || !$subscription->clinic->owner) {
+            return redirect()->back()
+                ->with('error', 'Could not find clinic or owner information for this subscription.');
+        }
+        
+        try {
+            // Send email to clinic owner
+            \Illuminate\Support\Facades\Mail::to($subscription->clinic->owner->email)
+                ->send(new \App\Mail\SubscriptionReceipt($subscription));
+                
+            // Add BCC to admin
+            if (auth()->user()->email) {
+                \Illuminate\Support\Facades\Mail::to(auth()->user()->email)
+                    ->send(new \App\Mail\SubscriptionReceipt($subscription));
+            }
+            
+            // Log this activity
+            \Illuminate\Support\Facades\Log::info('Admin sent subscription receipt', [
+                'admin_id' => auth()->id(),
+                'subscription_id' => $subscription->id,
+                'clinic_id' => $subscription->clinic_id,
+                'recipient' => $subscription->clinic->owner->email
+            ]);
+                
+            return redirect()->back()
+                ->with('success', 'Receipt has been sent to the clinic\'s email address.');
+        } catch (\Exception $e) {
+            // Log error
+            \Illuminate\Support\Facades\Log::error('Failed to send subscription receipt', [
+                'error' => $e->getMessage(),
+                'subscription_id' => $subscription->id
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Failed to send email. Error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Show all subscription transactions
+     */
+    public function allSubscriptions(Request $request)
+    {
+        $status = $request->input('status', 'all');
+        $search = $request->input('search');
+        
+        $query = \App\Models\Subscription::with('clinic.owner')->latest();
+        
+        // Filter by status if not "all"
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+        
+        // Apply search if provided
+        if ($search) {
+            $query->whereHas('clinic', function($q) use ($search) {
+                $q->where('clinic_name', 'like', "%{$search}%");
+            });
+        }
+        
+        $subscriptions = $query->paginate(10);
+        
+        return view('admin.subscriptions.all', compact('subscriptions', 'status'));
     }
 
     // Show users based on category (admin, users, clinic)
