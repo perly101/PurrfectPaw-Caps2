@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-class FixAppointmentsStatusColumn extends Migration
+if (!class_exists('FixAppointmentsStatusColumn110000A')) {
+class FixAppointmentsStatusColumn110000A extends Migration
 {
     /**
      * Run the migrations.
@@ -48,4 +49,5 @@ class FixAppointmentsStatusColumn extends Migration
             });
         }
     }
+}
 }

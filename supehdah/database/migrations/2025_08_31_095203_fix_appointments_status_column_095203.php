@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-class FixAppointmentsStatusColumn extends Migration
+class FixAppointmentsStatusColumn095203 extends Migration
 {
     /**
      * Run the migrations.
