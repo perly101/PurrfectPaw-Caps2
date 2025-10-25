@@ -7,12 +7,179 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Session;
 use App\Models\User;
 use App\Models\Clinic;
 use App\Models\Subscription;
 
 class ClinicRegistrationController extends Controller
 {
+    /**
+     * Send verification email with OTP to the user - Using Gmail account
+     */
+    protected function sendVerificationEmail($user, $otp)
+    {
+        $name = $user->first_name . ' ' . $user->last_name;
+        $email = $user->email;
+        
+        // Only store OTP in session for development environments
+        // In production, rely on email delivery
+        if (app()->environment(['local', 'development', 'testing'])) {
+            \Session::flash('dev_otp', $otp);
+            \Log::info("Development mode: OTP for {$email} is: {$otp}");
+        } else {
+            // In production, just log that an OTP was generated (but not the actual code)
+            \Log::info("Production: OTP generated for {$email}");
+        }
+        
+        $emailSent = false;
+        $errorMsg = '';
+        $logPrefix = "Email: ";
+        
+        // Try sending the email with Laravel's Mail and Gmail settings
+        try {
+            // Apply SSL fixes before sending
+            stream_context_set_default([
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ]);
+            
+            // Use Gmail SMTP settings from .env
+            config([
+                'mail.default' => 'smtp',
+                'mail.mailers.smtp.transport' => 'smtp',
+                'mail.mailers.smtp.host' => env('MAIL_HOST', 'smtp.gmail.com'),
+                'mail.mailers.smtp.port' => env('MAIL_PORT', 587),
+                'mail.mailers.smtp.encryption' => env('MAIL_ENCRYPTION', 'tls'),
+                'mail.mailers.smtp.username' => env('MAIL_USERNAME'),
+                'mail.mailers.smtp.password' => env('MAIL_PASSWORD'),
+                'mail.from.address' => env('MAIL_FROM_ADDRESS', 'purrf3ctpaw@gmail.com'),
+                'mail.from.name' => env('MAIL_FROM_NAME', 'PurrfectPaw')
+            ]);
+            
+            // Use Laravel's built-in Mail facade
+            \Mail::send('emails.clinic-registration-otp', 
+                ['user' => $user, 'otp' => $otp], 
+                function ($message) use ($name, $email) {
+                    $message->to($email, $name)
+                            ->subject('Verify Your Email for PurrfectPaw Clinic Registration');
+                }
+            );
+            
+            \Log::info("{$logPrefix}Email sent to {$email} using Laravel Mail with Gmail");
+            $emailSent = true;
+            return true;
+        } catch (\Exception $e) {
+            $errorMsg = $e->getMessage();
+            \Log::warning("{$logPrefix}Primary mail method failed: {$errorMsg}. Trying fallback method.");
+        }
+        
+        // Fallback 1: Try using Swift Mailer directly with Gmail settings from .env
+        if (!$emailSent) {
+            try {
+                // Configure Swift Mailer with Gmail settings directly from .env
+                $transport = new \Swift_SmtpTransport(
+                    env('MAIL_HOST', 'smtp.gmail.com'),
+                    env('MAIL_PORT', 587),
+                    env('MAIL_ENCRYPTION', 'tls')
+                );
+                
+                $transport->setUsername(env('MAIL_USERNAME', 'purrf3ctpaw@gmail.com'));
+                $transport->setPassword(env('MAIL_PASSWORD', 'btfsddqawibpjkni'));
+                
+                // Disable SSL verification in the transport
+                $transport->setStreamOptions([
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ]);
+                
+                $mailer = new \Swift_Mailer($transport);
+                // Create mailer and message
+                $mailer = new \Swift_Mailer($transport);
+                $message = new \Swift_Message('Verify Your Email for PurrfectPaw Clinic Registration');
+                $message->setFrom([env('MAIL_FROM_ADDRESS', 'purrf3ctpaw@gmail.com') => env('MAIL_FROM_NAME', 'PurrfectPaw')]);
+                $message->setTo([$email => $name]);
+                
+                // Simple HTML message with OTP
+                $message->setBody("
+                    <html>
+                    <body>
+                        <h2>Verify Your Email for PurrfectPaw Clinic Registration</h2>
+                        <p>Hello {$name},</p>
+                        <p>Your verification code is: <strong>{$otp}</strong></p>
+                        <p>Please enter this code on the verification page to complete your registration.</p>
+                        <p>This code will expire in 30 minutes.</p>
+                        <p>Thank you,<br>PurrfectPaw Team</p>
+                    </body>
+                    </html>
+                ", 'text/html');
+                
+                // Send the message
+                $result = $mailer->send($message);
+                
+                if ($result > 0) {
+                    \Log::info("{$logPrefix}Email sent to {$email} using Swift Mailer direct");
+                    $emailSent = true;
+                    return true;
+                }
+            } catch (\Exception $e) {
+                $errorMsg = $e->getMessage();
+                \Log::warning("{$logPrefix}Swift Mailer direct failed: {$errorMsg}");
+            }
+        }
+        
+        // Fallback 2: Direct PHP mail function as final fallback
+        if (!$emailSent) {
+            try {
+                $subject = 'Verify Your Email for PurrfectPaw Clinic Registration';
+                $headers = "From: " . env('MAIL_FROM_ADDRESS', 'purrf3ctpaw@gmail.com') . "\r\n";
+                $headers .= "Reply-To: " . env('MAIL_FROM_ADDRESS', 'purrf3ctpaw@gmail.com') . "\r\n";
+                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+                
+                $message = "
+                <html>
+                <body>
+                    <h2>Verify Your Email for PurrfectPaw Clinic Registration</h2>
+                    <p>Hello {$name},</p>
+                    <p>Your verification code is: <strong>{$otp}</strong></p>
+                    <p>Please enter this code on the verification page to complete your registration.</p>
+                    <p>This code will expire in 30 minutes.</p>
+                    <p>Thank you,<br>PurrfectPaw Team</p>
+                </body>
+                </html>
+                ";
+                
+                $mailSent = mail($email, $subject, $message, $headers);
+                
+                if ($mailSent) {
+                    \Log::info("{$logPrefix}Email sent to {$email} using PHP mail function");
+                    $emailSent = true;
+                    return true;
+                }
+            } catch (\Exception $e) {
+                $errorMsg = $e->getMessage();
+                \Log::error("{$logPrefix}PHP mail function failed: {$errorMsg}");
+            }
+        }
+        
+        // In production, if all email methods fail, we should report the error
+        \Log::error("All email sending methods failed for {$email}. Last error: {$errorMsg}");
+        
+        if (app()->environment(['local', 'development', 'testing'])) {
+            // In development, we can continue with the OTP in session
+            return true;
+        } else {
+            // In production, throw an exception so the user knows there was an issue
+            throw new \Exception("Could not send verification email. Please try again or contact support.");
+        }
+    }
+    
     /**
      * Show step 1 of the clinic registration form
      */
@@ -150,7 +317,7 @@ class ClinicRegistrationController extends Controller
                 'gender' => $request->gender,
                 'birthday' => $request->birthday,
                 'phone_number' => $request->phone_number,
-                'email_verified_at' => now(), // Auto verify for demo purposes
+                'email_verified_at' => null, // Must be verified by the user
             ]);
             
             // Create clinic record with owner relationship
@@ -163,7 +330,7 @@ class ClinicRegistrationController extends Controller
                     : null,
                 'owner_id' => $user->id,
                 'user_id' => $user->id, // Set user_id to connect staff account with clinic
-                'status' => 'pending_payment', // Set initial status as pending payment
+                'status' => 'pending_verification', // Set initial status as pending email verification
             ]);
             
             // Update user with clinic association
@@ -192,16 +359,41 @@ class ClinicRegistrationController extends Controller
                 throw new \Exception("Error creating subscription: " . $subscriptionError->getMessage(), 0, $subscriptionError);
             }
             
-            // Store subscription ID in session for the payment page
+            // Store subscription ID and user ID in session for the payment page
             $request->session()->put('subscription_id', $subscription->id);
+            $request->session()->put('clinic_registration_user_id', $user->id);
             
-            // Commit transaction
+            // Generate OTP for email verification
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            // Save OTP to database
+            \App\Models\EmailVerificationOtp::create([
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'otp' => $otp,
+                'expires_at' => \Carbon\Carbon::now()->addMinutes(30),
+            ]);
+            
+            // Commit transaction (commit before email sending to ensure database changes are saved)
             DB::commit();
+            
+            try {
+                // Send verification email
+                $this->sendVerificationEmail($user, $otp);
+            } catch (\Exception $emailException) {
+                // Log the error but don't throw it - we'll use the OTP from the database
+                Log::error('Email sending failed but continuing: ' . $emailException->getMessage());
+                
+                // If we're in a local/development/testing environment, display the OTP in the session flash
+                if (app()->environment('local', 'development', 'testing')) {
+                    $request->session()->flash('dev_otp', $otp);
+                }
+            }
             
             // Clear the step data
             $request->session()->forget(['clinic_step1', 'clinic_logo_path']);
             
-            return redirect()->route('payment.show');
+            return redirect()->route('clinic.register.verification');
             
         } catch (\Exception $e) {
             // Roll back transaction on error

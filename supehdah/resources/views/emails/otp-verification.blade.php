@@ -87,7 +87,7 @@
         </div>
         
         <div class="footer">
-            <p>If you're having trouble with the verification process, please contact our support team at support@PurrfectPaw.com</p>
+            <p>If you're having trouble with the verification process, please contact our support team at purrf3ctpaw@gmail.com</p>
             <div class="social-links">
                 <a href="#">Facebook</a> | <a href="#">Twitter</a> | <a href="#">Instagram</a>
             </div>

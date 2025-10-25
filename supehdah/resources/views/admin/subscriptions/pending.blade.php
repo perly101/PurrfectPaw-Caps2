@@ -74,7 +74,8 @@
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Type</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference Number</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Date</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -85,6 +86,11 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ucfirst($subscription->plan_type) }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">₱{{ number_format($subscription->amount, 2) }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ucfirst($subscription->payment_method ?? 'GCash') }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-yellow-50 text-yellow-800 border border-yellow-200">
+                                                {{ $subscription->payment_reference ?? 'No Reference' }}
+                                            </span>
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $subscription->created_at->format('M d, Y h:i A') }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex space-x-2">
@@ -193,9 +199,12 @@
                                                     <span class="text-gray-600">Payment Method:</span>
                                                     <span>{{ ucfirst($subscription->payment_method ?? 'GCash') }}</span>
                                                 </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">Payment Reference:</span>
-                                                    <span>{{ $subscription->payment_reference ?? 'Not available' }}</span>
+                                                <div class="mt-4 pt-3 border-t border-gray-200">
+                                                    <h4 class="font-medium text-gray-800 mb-2">GCash Reference Number:</h4>
+                                                    <div class="p-3 bg-white border-2 border-yellow-300 rounded-md">
+                                                        <p class="font-mono text-center text-lg font-bold text-yellow-900">{{ $subscription->payment_reference ?? 'NOT PROVIDED' }}</p>
+                                                        <p class="text-xs text-yellow-700 mt-1 text-center">Please verify this number with GCash before confirming payment</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

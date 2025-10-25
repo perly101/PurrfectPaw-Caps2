@@ -213,7 +213,7 @@
                         <p class="mb-1">1. Subscription fees are non-refundable once activated.</p>
                         <p class="mb-1">2. Renewal will be processed automatically unless cancelled before the end date.</p>
                         <p class="mb-1">3. For cancellation or changes to your subscription, please contact our support team.</p>
-                        <p>4. For any questions regarding your subscription, please email support@purrfectpaw.com</p>
+                        <p>4. For any questions regarding your subscription, please email purrf3ctpaw@gmail.com</p>
                     </div>
                     
                     <div class="mt-6 text-center">

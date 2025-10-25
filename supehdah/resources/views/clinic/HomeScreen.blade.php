@@ -2,16 +2,15 @@
   {{-- Include mobile navigation (only visible on mobile) --}}
   @include('clinic.components.mobile-nav')
 
-  <div class="py-12 bg-gray-100 min-h-screen">
-    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col md:flex-row md:space-x-6">
-        {{-- Sidebar (hidden on mobile) --}}
-        <div class="hidden md:block md:w-1/6 mb-6 md:mb-0">
-          @include('clinic.components.sidebar')
-        </div>
+  <div class="flex flex-col md:flex-row min-h-screen bg-gray-100">
+    {{-- Sidebar (hidden on mobile) --}}
+    <div class="md:block hidden">
+      @include('clinic.components.sidebar')
+    </div>
 
-        {{-- Main Content --}}
-        <div class="w-full md:w-5/6 space-y-6 mt-16 md:mt-0">
+    {{-- Main Content --}}
+    <div class="flex-1 p-4 md:p-6 md:ml-64 w-full">
+      <div class="space-y-6 mt-16 md:mt-0">
         {{-- Hero --}}
         <div class="relative overflow-hidden rounded-lg shadow-md">
           <div class="w-full h-40 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-r from-purple-500 to-pink-400">
@@ -202,5 +201,4 @@
         @endif
       </div>
     </div>
-  </div>
 </x-app-layout>

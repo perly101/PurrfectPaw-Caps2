@@ -26,7 +26,13 @@ class FakePaymentController extends Controller
         
         try {
             // Get the subscription
-            $subscription = Subscription::with('clinic')->findOrFail($request->session()->get('subscription_id'));
+            $subscription = Subscription::with('clinic.owner')->findOrFail($request->session()->get('subscription_id'));
+            
+            // Check if user's email is verified
+            if (!$subscription->clinic->owner->hasVerifiedEmail()) {
+                return redirect()->route('clinic.register.verification')
+                    ->with('error', 'Please verify your email before proceeding to payment.');
+            }
             
             // Check if subscription is already paid
             if ($subscription->status !== 'pending') {
@@ -48,9 +54,14 @@ class FakePaymentController extends Controller
      */
     public function process(Request $request)
     {
-        // Validate the subscription ID
+        // Validate the subscription ID and reference number
         $request->validate([
-            'subscription_id' => 'required|exists:subscriptions,id'
+            'subscription_id' => 'required|exists:subscriptions,id',
+            'reference_number' => 'required|string|min:5|max:50'
+        ], [
+            'reference_number.required' => 'Please enter your GCash reference number',
+            'reference_number.min' => 'The reference number is too short, please check it',
+            'reference_number.max' => 'The reference number is too long, please check it'
         ]);
         
         try {
@@ -63,7 +74,7 @@ class FakePaymentController extends Controller
             // Update subscription status to pending admin confirmation
             $subscription->status = 'pending_admin_confirmation';
             $subscription->payment_method = 'gcash';
-            $subscription->payment_reference = 'GCASH-' . time();
+            $subscription->payment_reference = $request->reference_number;
             $subscription->save();
             
             // Update clinic status to pending admin confirmation
@@ -115,6 +126,13 @@ class FakePaymentController extends Controller
             
             // Get the subscription
             $subscription = Subscription::with('clinic.owner')->findOrFail($id);
+            
+            // Log the payment verification
+            Log::info('Admin confirming payment', [
+                'admin_id' => auth()->id(),
+                'subscription_id' => $subscription->id,
+                'reference_number' => $subscription->payment_reference
+            ]);
             
             // Update subscription status and dates
             $now = Carbon::now();
@@ -180,21 +198,93 @@ class FakePaymentController extends Controller
     
     /**
      * Show the thank you page after payment is submitted but pending admin confirmation
+     * or has been activated
      */
     public function thankYouPending()
     {
         try {
-            // Get the latest pending admin confirmation subscription
+            // First, try to get a pending subscription
             $subscription = Subscription::with('clinic.owner')
                 ->where('status', 'pending_admin_confirmation')
                 ->latest()
-                ->firstOrFail();
+                ->first();
+                
+            // If no pending subscription found, look for an active one
+            if (!$subscription) {
+                $subscription = Subscription::with('clinic.owner')
+                    ->where('status', 'active')
+                    ->latest()
+                    ->first();
+                    
+                // If found an active subscription, redirect to the thank you page
+                if ($subscription) {
+                    return redirect()->route('payment.thank-you');
+                }
+            }
+            
+            if (!$subscription) {
+                throw new \Exception('No pending or active subscription found');
+            }
                 
             return view('clinic.thank-you-pending', compact('subscription'));
         } catch (\Exception $e) {
             Log::error('Thank you pending page error: ' . $e->getMessage());
             return redirect()->route('landing')
                 ->with('error', 'Unable to retrieve subscription information.');
+        }
+    }
+    
+    /**
+     * Check subscription status via AJAX
+     * This method will check for the user's most recent subscription
+     * and return its status
+     */
+    public function checkStatus()
+    {
+        try {
+            // First check for any pending subscriptions
+            $subscription = Subscription::with('clinic.owner')
+                ->where('status', 'pending_admin_confirmation')
+                ->latest()
+                ->first();
+                
+            // If no pending subscription, look for an active one
+            if (!$subscription) {
+                $subscription = Subscription::with('clinic.owner')
+                    ->where('status', 'active')
+                    ->latest()
+                    ->first();
+            }
+            
+            // If still no subscription found
+            if (!$subscription) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No subscription found'
+                ], 404);
+            }
+            
+            // Check if subscription is active
+            if ($subscription->status === 'active') {
+                return response()->json([
+                    'status' => 'active',
+                    'redirect' => route('payment.thank-you'),
+                    'message' => 'Your subscription has been activated!'
+                ]);
+            } else {
+                return response()->json([
+                    'status' => $subscription->status,
+                    'message' => 'Your subscription is still pending admin confirmation',
+                    'created_at' => $subscription->created_at->diffForHumans(),
+                    'subscription_id' => $subscription->id
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Check status error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error checking subscription status: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

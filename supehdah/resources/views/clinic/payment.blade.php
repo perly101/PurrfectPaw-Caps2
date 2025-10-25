@@ -73,12 +73,25 @@
                 <div class="text-center">
                     <p class="mb-4 text-gray-500 text-sm">
                         <span class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">Important</span>
-                        After sending payment through GCash, please confirm below
+                        After sending payment through GCash, please enter your reference number and confirm below
                     </p>
                     
-                    <form action="{{ route('payment.process') }}" method="POST">
+                    <form action="{{ route('payment.process') }}" method="POST" class="max-w-md mx-auto">
                         @csrf
                         <input type="hidden" name="subscription_id" value="{{ $subscription->id }}">
+                        
+                        <div class="mb-4">
+                            <label for="reference_number" class="block text-sm font-medium text-gray-700 text-left mb-1">GCash Reference Number <span class="text-red-500">*</span></label>
+                            <input type="text" id="reference_number" name="reference_number" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Enter your GCash reference number">
+                            <p class="mt-1 text-xs text-gray-500 text-left">This is the reference number provided by GCash after your transaction. The admin will verify this number.</p>
+                            
+                            @error('reference_number')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <button type="submit" class="px-6 py-3 rounded-lg bg-green-600 text-white font-medium shadow-md hover:bg-green-700 focus:ring-2 focus:ring-green-400 transition flex items-center justify-center mx-auto">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

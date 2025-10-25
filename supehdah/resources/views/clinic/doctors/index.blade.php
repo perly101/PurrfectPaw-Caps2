@@ -33,29 +33,34 @@
 </style>
 
 <x-app-layout>
-    <div class="py-8 sm:py-12 bg-gray-100 min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
-            
-            {{-- Sidebar --}}
-            <div class="w-1/4">
-                @include('clinic.components.sidebar')
-            </div>
-            
-            {{-- Main Content --}}
-            <div class="w-full lg:w-3/4">
-                <div class="bg-white shadow-xl rounded-lg p-4 sm:p-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">Doctors Management</h1>
-                        <a href="{{ route('clinic.doctors.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center transition-all duration-200 text-sm sm:text-base">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" viewBox="0 0 20 20" fill="currentColor">
+    <div class="flex flex-col md:flex-row min-h-screen bg-gray-100">
+        {{-- Sidebar (hidden on mobile) --}}
+        <div class="md:block hidden">
+            @include('clinic.components.sidebar')
+        </div>
+
+        {{-- Main Content --}}  
+        <div class="flex-1 p-4 md:p-6 md:ml-64 w-full">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div class="mb-4 md:mb-0">
+                        <h2 class="text-xl md:text-2xl font-semibold text-gray-800">Doctors Management</h2>
+                        <p class="text-gray-500 text-sm mt-1">Manage your clinic's doctors and their availability</p>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <a href="{{ route('clinic.doctors.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-all duration-200 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                             </svg>
                             <span>Add Doctor</span>
                         </a>
                     </div>
+                </div>
+                
+                <div class="bg-white shadow-lg rounded-xl p-4 sm:p-6 border border-gray-200">
 
     @if(session('success'))
-    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">
+    <div class="bg-green-50 border border-green-200 text-green-800 p-4 mb-6 rounded-lg">
         <div class="flex">
             <div class="flex-shrink-0">
                 <svg class="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -63,23 +68,23 @@
                 </svg>
             </div>
             <div class="ml-3">
-                <p class="text-sm">{{ session('success') }}</p>
+                <p class="text-sm font-medium">{{ session('success') }}</p>
             </div>
         </div>
     </div>
     @endif
 
     @if(count($doctors) > 0)
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Specialization</th>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Experience</th>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Specialization</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Experience</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -111,11 +116,11 @@
                     </td>
                     <td class="px-4 sm:px-6 py-4">
                         <select 
-                            class="status-select text-sm rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
+                            class="status-select rounded-lg border shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
                             {{ $doctor->availability_status === 'active' ? 'text-green-700 bg-green-100 border-green-200' : 
                                ($doctor->availability_status === 'on_leave' ? 'text-yellow-600 bg-yellow-100 border-yellow-200' : 
                                'text-red-700 bg-red-100 border-red-200') }}
-                            w-full sm:w-auto text-xs sm:text-sm"
+                            w-full sm:w-auto text-sm py-1.5 px-2"
                             data-doctor-id="{{ $doctor->id }}"
                             data-original-status="{{ $doctor->availability_status }}">
                             <option value="active" {{ $doctor->availability_status === 'active' ? 'selected' : '' }}>Active</option>
@@ -157,15 +162,17 @@
         </div>
     </div>
     @else
-    <div class="bg-white p-4 sm:p-6 rounded-lg shadow text-center">
-        <div class="mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
+    <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-200 text-center">
+        <div class="mb-6">
+            <div class="bg-blue-50 rounded-full h-24 w-24 flex items-center justify-center mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </div>
         </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No Doctors Found</h3>
-        <p class="text-gray-500 mb-4">You haven't added any doctors to your clinic yet.</p>
-        <a href="{{ route('clinic.doctors.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition-all duration-200">
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Doctors Found</h3>
+        <p class="text-gray-500 mb-6 max-w-md mx-auto">You haven't added any doctors to your clinic yet. Add your first doctor to start managing appointments.</p>
+        <a href="{{ route('clinic.doctors.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
             </svg>
@@ -285,7 +292,6 @@
     });
 </script>
 @endpush
-                </div>
             </div>
         </div>
     </div>

@@ -257,9 +257,29 @@
                                 </div>
                                 <div>
                                     <p class="font-medium">{{ ucfirst($subscription->payment_method ?? 'GCash') }}</p>
-                                    <p class="text-sm text-gray-500">Reference: {{ $subscription->payment_reference ?? 'N/A' }}</p>
                                 </div>
                             </div>
+                            
+                            @if($subscription->status === 'pending_admin_confirmation')
+                            <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                <h4 class="font-medium text-yellow-800 mb-1 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    Verification Required
+                                </h4>
+                                <p class="text-sm text-yellow-700">Please verify this GCash reference number against your GCash transactions:</p>
+                                <div class="mt-2 p-2 bg-white border border-yellow-300 rounded font-mono text-lg text-center font-bold text-yellow-900">
+                                    {{ $subscription->payment_reference ?? 'No reference provided' }}
+                                </div>
+                                <p class="mt-2 text-xs text-yellow-700">This reference was provided by the clinic during payment submission.</p>
+                            </div>
+                            @else
+                            <div class="mt-4">
+                                <p class="text-sm text-gray-800"><span class="font-medium">Reference Number:</span> {{ $subscription->payment_reference ?? 'N/A' }}</p>
+                                <p class="text-xs text-gray-500 mt-1">This reference was provided by the clinic during payment submission.</p>
+                            </div>
+                            @endif
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Transaction Details</h3>
@@ -267,8 +287,12 @@
                             @if($subscription->status === 'active')
                                 <p><span class="text-gray-500">Approved:</span> {{ $subscription->start_date->format('F d, Y h:i A') }}</p>
                                 <p><span class="text-gray-500">Approved by:</span> Administrator</p>
+                                <p class="mt-2"><span class="text-gray-500">Verified Reference Number:</span> <span class="font-medium">{{ $subscription->payment_reference }}</span></p>
                             @else
                                 <p><span class="text-gray-500">Status:</span> Pending Admin Confirmation</p>
+                                <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                    <p class="text-sm text-blue-700">Please check this reference number in your GCash account before confirming payment.</p>
+                                </div>
                             @endif
                         </div>
                     </div>

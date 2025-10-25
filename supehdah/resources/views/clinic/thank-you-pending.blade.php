@@ -83,7 +83,13 @@
             
             <div class="mt-8 text-center">
                 <p class="text-sm text-gray-500">Need help? <a href="#" class="text-indigo-600 hover:text-indigo-500">Contact our support team</a></p>
+                <p id="refresh-message" class="text-xs text-gray-400 mt-2">Checking for status updates automatically... <span id="refresh-countdown">30</span> seconds until next check.</p>
+                <div id="status-update" class="mt-3 text-sm hidden"></div>
+                <div id="status-checker" data-check-url="{{ route('payment.check-status') }}" class="hidden"></div>
             </div>
         </div>
     </div>
+
+    <!-- Include the subscription status checker JavaScript -->
+    <script src="{{ asset('js/subscription-status-checker.js') }}"></script>
 </x-app-layout>
