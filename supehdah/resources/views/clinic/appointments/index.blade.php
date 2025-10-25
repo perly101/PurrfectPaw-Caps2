@@ -4,31 +4,39 @@
 @endphp
 
 <x-app-layout>
-    <div class="py-12 bg-gray-100 min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
+    <div class="py-6 bg-gray-100 min-h-screen">
+        <div class="px-4 sm:px-6 lg:px-8 flex">
             
             {{-- Sidebar --}}
-             <div class="w-1/4">
+            <div class="w-64 flex-shrink-0 mr-6">
                 @include('clinic.components.sidebar')
             </div>
             
             <div class="flex-1">
-                <div class="bg-white shadow-xl rounded-lg p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-2xl font-bold text-gray-800">Appointment Management</h1>
-                        <a href="{{ route('clinic.appointments.archived') }}" 
-                           class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition duration-150">
-                            View Archived Appointments
-                        </a>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div class="mb-4 md:mb-0">
+                        <h2 class="text-xl md:text-2xl font-semibold text-gray-800">Appointment Management</h2>
+                        <p class="text-gray-500 text-sm mt-1">View and manage all clinic appointments</p>
                     </div>
                     
+                    <div class="flex space-x-2">
+                        <a href="{{ route('clinic.appointments.archived') }}" 
+                           class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm flex items-center transition">
+                            <i class="fas fa-archive mr-2"></i> View Archived Appointments
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-lg border border-gray-200 rounded-lg p-6">
+                    
                     @if(session('success'))
-                        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
+                        <div class="bg-green-100 border border-green-300 rounded-lg shadow-sm text-green-700 p-4 mb-6 flex items-center" role="alert">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
                             <p>{{ session('success') }}</p>
                         </div>
                     @endif
                     
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg shadow">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr class="bg-gray-50">
@@ -112,8 +120,12 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                            No appointments found
+                                        <td colspan="6" class="px-6 py-10 text-center">
+                                            <div class="flex flex-col items-center justify-center">
+                                                <i class="fas fa-calendar-times text-4xl text-gray-300 mb-3"></i>
+                                                <p class="text-gray-500 font-medium">No appointments found</p>
+                                                <p class="text-gray-400 text-sm">Appointments will appear here when scheduled</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -121,7 +133,7 @@
                         </table>
                     </div>
                     
-                    <div class="mt-4">
+                    <div class="mt-6 bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                         {{ $appointments->links() }}
                     </div>
                 </div>
@@ -131,35 +143,38 @@
 
     <!-- Assign Doctor Modal -->
     <div id="assignDoctorModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center z-50 hidden" style="display: none;">
-        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white rounded-lg shadow-xl border border-gray-200 p-6 w-full max-w-md mx-auto mt-20">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
                 <h3 class="text-lg font-bold text-gray-900">Assign Doctor to Appointment</h3>
                 <button onclick="closeAssignModal()" class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <form id="assignDoctorForm" method="POST" action="">
                 @csrf
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="doctor_id">
-                        Select Doctor
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-medium mb-2" for="doctor_id">
+                        <i class="fas fa-user-md mr-1"></i> Select Doctor
                     </label>
-                    <select id="doctor_id" name="doctor_id" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="">-- Select a doctor --</option>
-                        @foreach(App\Models\Doctor::where('clinic_id', $clinic->id)->where('availability_status', 'active')->get() as $doctor)
-                            <option value="{{ $doctor->id }}">{{ $doctor->first_name }} {{ $doctor->last_name }} ({{ $doctor->specialization }})</option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <select id="doctor_id" name="doctor_id" class="block w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm appearance-none bg-white">
+                            <option value="">-- Select a doctor --</option>
+                            @foreach(App\Models\Doctor::where('clinic_id', $clinic->id)->where('availability_status', 'active')->get() as $doctor)
+                                <option value="{{ $doctor->id }}">{{ $doctor->first_name }} {{ $doctor->last_name }} ({{ $doctor->specialization }})</option>
+                            @endforeach
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="closeAssignModal()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">
-                        Cancel
+                <div class="flex justify-end pt-3 border-t border-gray-200 mt-6">
+                    <button type="button" onclick="closeAssignModal()" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-5 rounded-md mr-3">
+                        <i class="fas fa-times mr-1"></i> Cancel
                     </button>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Assign
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-md">
+                        <i class="fas fa-check mr-1"></i> Assign
                     </button>
                 </div>
             </form>

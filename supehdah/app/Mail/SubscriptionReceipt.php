@@ -44,7 +44,7 @@ class SubscriptionReceipt extends Mailable
             ->markdown('emails.subscription-receipt')
             ->with([
                 'receiptUrl' => route('clinic.subscription.receipt'),
-                'supportEmail' => 'support@purrfectpaw.com',
+                'supportEmail' => 'purrf3ctpaw@gmail.com',
                 'generatedAt' => now()->format('F d, Y h:i A')
             ]);
     }

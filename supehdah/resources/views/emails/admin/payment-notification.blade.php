@@ -15,6 +15,11 @@ A new clinic has registered and claims to have made a payment that requires your
 **Amount:** ₱{{ number_format($subscription->amount, 2) }}  
 **Registration Date:** {{ $subscription->created_at->format('F d, Y h:i A') }}
 
+## Payment Information
+**Payment Method:** {{ ucfirst($subscription->payment_method ?? 'GCash') }}  
+**GCash Reference Number:** {{ $subscription->payment_reference ?? 'Not provided' }}  
+**Submitted:** {{ $subscription->updated_at->format('F d, Y h:i A') }}
+
 @component('mail::button', ['url' => url('/admin/subscriptions/pending')])
 Review Pending Payments
 @endcomponent

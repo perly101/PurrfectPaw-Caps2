@@ -402,9 +402,16 @@ public function downloadClinicInfo($id, Request $request)
 public function refreshStats()
 {
     return response()->json([
+        // Main dashboard stats
         'userCount' => User::where('role', 'user')->count(),
         'clinicCount' => User::where('role', 'clinic')->count(),
         'todayCount' => User::whereDate('created_at', today())->count(),
+        
+        // Activity summary stats
+        'recentUsers' => User::where('created_at', '>=', now()->subDays(7))->where('role', 'user')->count(),
+        'newAppointments' => \App\Models\Appointment::where('created_at', '>=', now()->subDays(7))->count(),
+        'activeClinics' => User::where('role', 'clinic')->count(),
+        'totalAppointments' => \App\Models\Appointment::count(),
     ]);
 }
 

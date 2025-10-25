@@ -41,7 +41,7 @@
 1. Subscription fees are non-refundable once activated.
 2. Renewal will be processed automatically unless cancelled before the end date.
 3. For cancellation or changes to your subscription, please contact our support team.
-4. For any questions regarding your subscription, please email support@purrfectpaw.com
+4. For any questions regarding your subscription, please email purrf3ctpaw@gmail.com
 
 @component('mail::button', ['url' => $receiptUrl])
 View Online Receipt

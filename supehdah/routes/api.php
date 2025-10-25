@@ -48,6 +48,15 @@ Route::get('/clinics/{clinic}/gallery', [ClinicGalleryController::class, 'index'
 
 Route::get('/clinics/{clinic}/fields', [ClinicFieldApiController::class, 'index']);
 
+// Clinic Fields Management API (for clinic owners)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/clinic/fields', [ClinicFieldApiController::class, 'myFields']);
+    Route::post('/clinic/fields', [ClinicFieldApiController::class, 'store']);
+    Route::get('/clinic/fields/{id}', [ClinicFieldApiController::class, 'show']);
+    Route::put('/clinic/fields/{id}', [ClinicFieldApiController::class, 'update']);
+    Route::delete('/clinic/fields/{id}', [ClinicFieldApiController::class, 'destroy']);
+});
+
 // Appointment routes
 Route::middleware('refresh.appointment')->group(function () {
     Route::post('/clinics/{clinicId}/appointments', [AppointmentApiController::class, 'store']);

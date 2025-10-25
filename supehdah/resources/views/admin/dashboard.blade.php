@@ -8,7 +8,7 @@
             @include('admin.components.sidebar')
         </div>
 
-        {{-- Main Content --}}
+        {{-- Main Content --}}  
         <div class="flex-1 p-4 md:p-6 md:ml-64 w-full">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div class="mb-4 md:mb-0">
@@ -196,25 +196,25 @@
                         </div>
                     </div>
 
-                    {{-- Quick Stats --}}
+                    {{-- Quick Stats with Real Data --}}
                     <div class="bg-white shadow-lg rounded-xl p-4 md:p-6 border border-gray-200">
                         <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 text-gray-800">Activity Summary</h3>
                         <div class="space-y-3 md:space-y-4">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs md:text-sm text-gray-600">Active Users (Last 7 days)</span>
-                                <span class="font-semibold text-xs md:text-sm text-gray-800">{{ rand(30, 100) }}</span>
+                                <span class="text-xs md:text-sm text-gray-600">Recent Users (Last 7 days)</span>
+                                <span class="font-semibold text-xs md:text-sm text-gray-800" data-stat="recent-users">{{ \App\Models\User::where('created_at', '>=', now()->subDays(7))->where('role', 'user')->count() }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs md:text-sm text-gray-600">New Appointments</span>
-                                <span class="font-semibold text-xs md:text-sm text-gray-800">{{ rand(5, 25) }}</span>
+                                <span class="text-xs md:text-sm text-gray-600">New Appointments (Last 7 days)</span>
+                                <span class="font-semibold text-xs md:text-sm text-gray-800" data-stat="new-appointments">{{ \App\Models\Appointment::where('created_at', '>=', now()->subDays(7))->count() }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs md:text-sm text-gray-600">Pending Approvals</span>
-                                <span class="font-semibold text-xs md:text-sm text-gray-800">{{ rand(0, 10) }}</span>
+                                <span class="text-xs md:text-sm text-gray-600">Active Clinics</span>
+                                <span class="font-semibold text-xs md:text-sm text-gray-800" data-stat="active-clinics">{{ \App\Models\User::where('role', 'clinic')->count() }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs md:text-sm text-gray-600">System Uptime</span>
-                                <span class="font-semibold text-xs md:text-sm text-gray-800">99.9%</span>
+                                <span class="text-xs md:text-sm text-gray-600">Total Appointments</span>
+                                <span class="font-semibold text-xs md:text-sm text-gray-800" data-stat="total-appointments">{{ \App\Models\Appointment::count() }}</span>
                             </div>
                         </div>
                     </div>
@@ -257,9 +257,16 @@
             fetch('/admin/dashboard/refresh-stats')
                 .then(res => res.json())
                 .then(data => {
+                    // Update main stats
                     document.getElementById('user-count').textContent = data.userCount;
                     document.getElementById('clinic-count').textContent = data.clinicCount;
                     document.getElementById('today-count').textContent = data.todayCount;
+                    
+                    // Update activity summary stats if available in the response
+                    if (data.recentUsers) document.querySelector('[data-stat="recent-users"]').textContent = data.recentUsers;
+                    if (data.newAppointments) document.querySelector('[data-stat="new-appointments"]').textContent = data.newAppointments;
+                    if (data.activeClinics) document.querySelector('[data-stat="active-clinics"]').textContent = data.activeClinics;
+                    if (data.totalAppointments) document.querySelector('[data-stat="total-appointments"]').textContent = data.totalAppointments;
                     
                     // Show notification
                     const notification = document.createElement('div');

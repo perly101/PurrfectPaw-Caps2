@@ -8,6 +8,8 @@ use App\Models\Clinic;
 use App\Models\ClinicInfo;
 use App\Models\Doctor;
 use App\Services\Notification\NotificationService;
+use App\Services\SmsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -44,47 +46,44 @@ class AppointmentController extends Controller
      */
     public function archivedAppointments()
     {
-        $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
-        
-        // Get all distinct patient names that have completed/cancelled appointments
-        $patients = Appointment::where('clinic_id', $clinic->id)
-            ->whereIn('status', ['completed', 'cancelled'])
-            ->select('owner_name', 'owner_phone')
-            ->distinct()
-            ->orderBy('owner_name')
-            ->get();
+        try {
+            $clinic = ClinicInfo::where('user_id', Auth::id())->firstOrFail();
             
-        // For each patient, get their appointments
-        foreach ($patients as $patient) {
-            $patient->appointments = Appointment::where('clinic_id', $clinic->id)
-                ->where('owner_name', $patient->owner_name)
-                ->where('owner_phone', $patient->owner_phone)
+            // Get all distinct patient names that have completed/cancelled appointments
+            $patients = DB::table('appointments')
+                ->select('owner_name', 'owner_phone', DB::raw('COUNT(*) as appointments_count'))
+                ->where('clinic_id', $clinic->id)
                 ->whereIn('status', ['completed', 'cancelled'])
-                ->with('doctor') // Eager load doctor relationship
-                ->select(
-                    'id', 'clinic_id', 'doctor_id', 'owner_name', 'owner_phone', 
-                    'appointment_date', 'appointment_time', 'status', 
-                    'notes', 'updated_at', 'created_at'
-                )
-                ->orderBy('updated_at', 'desc')
+                ->groupBy('owner_name', 'owner_phone')
+                ->orderBy('owner_name')
                 ->get();
-        }
-        
-        // Paginate the patients list
-        $perPage = 15;
-        $currentPage = request()->get('page', 1);
-        $pagedPatients = new \Illuminate\Pagination\LengthAwarePaginator(
-            $patients->forPage($currentPage, $perPage),
-            $patients->count(),
-            $perPage,
-            $currentPage,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
+                
+            // Convert to a collection for pagination
+            $patients = collect($patients);
             
-        return view('clinic.appointments.archived', [
-            'patients' => $pagedPatients,
-            'clinic' => $clinic
-        ]);
+            // Paginate the patients list
+            $perPage = 15;
+            $currentPage = request()->get('page', 1);
+            $pagedPatients = new \Illuminate\Pagination\LengthAwarePaginator(
+                $patients->forPage($currentPage, $perPage),
+                $patients->count(),
+                $perPage,
+                $currentPage,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+                
+            return view('clinic.appointments.archived', [
+                'patients' => $pagedPatients,
+                'clinic' => $clinic
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in archivedAppointments: ' . $e->getMessage());
+            return view('clinic.appointments.archived', [
+                'patients' => collect([]),
+                'clinic' => $clinic ?? null,
+                'error' => 'There was an error loading the archived appointments. Please try again.'
+            ]);
+        }
     }
     
     /**
@@ -165,6 +164,61 @@ class AppointmentController extends Controller
         $oldStatus = $appointment->status;
         $appointment->status = $request->status;
         $appointment->save();
+        
+        // Send SMS notification when appointment is confirmed
+        if ($request->status === 'confirmed' && $oldStatus !== 'confirmed' && $appointment->owner_phone) {
+            try {
+                $smsService = app(SmsService::class);
+                
+                // Prepare appointment data for SMS
+                $appointmentData = [
+                    'clinic_name' => $clinic->clinic_name ?? 'AutoRepair Clinic',
+                    'appointment_date' => $appointment->appointment_date ? 
+                        \Carbon\Carbon::parse($appointment->appointment_date)->format('F j, Y') : '',
+                    'appointment_time' => $appointment->formatted_time ?? '',
+                    'doctor_name' => $appointment->doctor ? $appointment->doctor->name : 'Available Doctor',
+                    'pet_name' => $appointment->owner_name ?? 'your pet'
+                ];
+                
+                $result = $smsService->sendAppointmentConfirmation($appointment->owner_phone, $appointmentData);
+                
+                if ($result['success']) {
+                    Log::info('Appointment confirmation SMS sent successfully', [
+                        'appointment_id' => $appointment->id,
+                        'phone' => $appointment->owner_phone
+                    ]);
+                } else {
+                    Log::error('Failed to send appointment confirmation SMS', [
+                        'appointment_id' => $appointment->id,
+                        'phone' => $appointment->owner_phone,
+                        'error' => $result['error'] ?? 'Unknown error'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('SMS service error during appointment confirmation: ' . $e->getMessage(), [
+                    'appointment_id' => $appointment->id,
+                    'phone' => $appointment->owner_phone
+                ]);
+            }
+        }
+        
+        // Send SMS notification when appointment is cancelled
+        if ($request->status === 'cancelled' && $oldStatus !== 'cancelled' && $appointment->owner_phone) {
+            try {
+                $smsService = app(SmsService::class);
+                
+                $appointmentData = [
+                    'clinic_name' => $clinic->clinic_name ?? 'AutoRepair Clinic',
+                    'appointment_date' => $appointment->appointment_date ? 
+                        \Carbon\Carbon::parse($appointment->appointment_date)->format('F j, Y') : '',
+                    'appointment_time' => $appointment->formatted_time ?? ''
+                ];
+                
+                $smsService->sendAppointmentCancellation($appointment->owner_phone, $appointmentData);
+            } catch (\Exception $e) {
+                Log::error('SMS service error during appointment cancellation: ' . $e->getMessage());
+            }
+        }
         
         // If the appointment is marked as completed, send a notification
         if ($request->status === 'completed' && $oldStatus !== 'completed') {

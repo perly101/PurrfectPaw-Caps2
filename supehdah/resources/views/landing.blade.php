@@ -5,84 +5,138 @@
 @section('content')
 <div class="min-h-screen bg-white flex flex-col">
     <!-- Main Navigation - Professional and clean with business focus -->
-    <nav class="sticky top-0 z-40 bg-white shadow-md">
-        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+    <nav class="sticky top-0 z-40 bg-white shadow-md backdrop-filter backdrop-blur-lg bg-opacity-95">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center">
-                <img src="{{ asset('images/pet-logo.png') }}" alt="PurrfectPaw" class="h-12 w-12 rounded-full object-cover border-2 border-indigo-300 mr-3">
+                <img src="{{ asset('images/newlogo.png') }}" alt="PurrfectPaw" class="h-10 mr-2">
                 <span class="text-gray-800 text-2xl font-bold">PurrfectPaw</span>
             </div>
             <div class="hidden lg:flex items-center space-x-8">
-                <a href="#about" class="text-gray-700 hover:text-purple-500 transition font-medium">About Us</a>
-                <a href="#benefits" class="text-gray-700 hover:text-purple-500 transition font-medium">Benefits</a>
-                <a href="#features" class="text-gray-700 hover:text-purple-500 transition font-medium">Features</a>
-                <a href="#pricing" class="text-gray-700 hover:text-purple-500 transition font-medium">Pricing</a>
-                <a href="#testimonials" class="text-gray-700 hover:text-purple-500 transition font-medium">Testimonials</a>
+                <a href="#about" class="text-gray-700 hover:text-purple-500 transition font-medium relative group">
+                    About Us
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#benefits" class="text-gray-700 hover:text-purple-500 transition font-medium relative group">
+                    Benefits
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#features" class="text-gray-700 hover:text-purple-500 transition font-medium relative group">
+                    Features
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#pricing" class="text-gray-700 hover:text-purple-500 transition font-medium relative group">
+                    Pricing
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#testimonials" class="text-gray-700 hover:text-purple-500 transition font-medium relative group">
+                    Testimonials
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="{{ route('login') }}" class="hidden md:inline-block text-purple-500 font-semibold hover:text-purple-600 transition">Log In</a>
-                <a href="{{ route('register') }}" class="bg-purple-500 text-white px-5 py-2 rounded-md font-semibold hover:bg-purple-600 transition shadow-sm">Join Now</a>
+                <a href="{{ route('login') }}" class="hidden md:inline-block text-purple-600 font-semibold hover:text-purple-700 transition">Log In</a>
+                <a href="{{ route('register') }}" class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:from-purple-600 hover:to-indigo-700 transition shadow-md">Join Now</a>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section - Professional business focused hero -->
-    <div id="about" class="relative bg-gradient-to-r from-indigo-300 to-purple-400 py-16">
-        <div class="absolute inset-0 overflow-hidden">
-            <svg class="absolute bottom-0 left-0 right-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
-                <path fill="#ffffff" fill-opacity="1" d="M0,192L48,181.3C96,171,192,149,288,149.3C384,149,480,171,576,186.7C672,203,768,213,864,192C960,171,1056,117,1152,106.7C1248,96,1344,128,1392,144L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-            </svg>
+    <!-- Hero Section - Professional business focused hero with background image -->
+    <div id="about" class="relative py-16 overflow-hidden" style="background-image: url('{{ asset('images/pic2.jpg') }}'); background-size: cover; background-position: center;">
+        <!-- Background overlay for better text readability -->
+        <div class="absolute inset-0 bg-blue-900/40"></div>
+        
+        <!-- Social Media Links (Left Side) -->
+        <div class="fixed left-0 top-1/3 z-50 flex flex-col space-y-4 px-4 py-6 bg-white/30 backdrop-blur-sm rounded-r-lg shadow-lg social-panel">
+            <a href="https://www.facebook.com/purrfectpaw" data-social="facebook" target="_blank" rel="noopener noreferrer" class="text-black-800 hover:text-indigo-900 transition-all transform hover:scale-125" title="Follow us on Facebook">
+                <i class="fab fa-facebook-f text-xl"></i>
+            </a>
+            <a href="https://twitter.com/purrfectpaw" data-social="twitter" target="_blank" rel="noopener noreferrer" class="text-black-800 hover:text-indigo-900 transition-all transform hover:scale-125" title="Follow us on Twitter">
+                <i class="fab fa-twitter text-xl"></i>
+            </a>
+            <a href="https://www.instagram.com/purrfectpaw" data-social="instagram" target="_blank" rel="noopener noreferrer" class="text-black-800 hover:text-indigo-900 transition-all transform hover:scale-125" title="Follow us on Instagram">
+                <i class="fab fa-instagram text-xl"></i>
+            </a>
+            <a href="https://www.youtube.com/channel/purrfectpaw" data-social="youtube" target="_blank" rel="noopener noreferrer" class="text-black-800 hover:text-indigo-900 transition-all transform hover:scale-125" title="Subscribe to our YouTube channel">
+                <i class="fab fa-youtube text-xl"></i>
+            </a>
+            <a href="mailto:purrf3ctpaw@gmail.com" data-social="email" class="text-black-800 hover:text-indigo-900 transition-all transform hover:scale-125" title="Email us">
+                <i class="fas fa-envelope text-xl"></i>
+            </a>
         </div>
-        <div class="container mx-auto px-6 pt-10 pb-32 relative z-10">
-            <div class="flex flex-col md:flex-row items-center">
-                <div class="md:w-1/2 mb-10 md:mb-0 pr-0 md:pr-10">
-                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">Streamline Your Veterinary Practice Management</h1>
-                    <p class="text-white/90 text-lg mb-8 max-w-md">
+        
+        <!-- Wavy background -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <svg class="absolute bottom-0 left-0 right-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path fill="#ffffff" fill-opacity="1" d="M0,96L30,112C60,128,120,160,180,181.3C240,203,300,213,360,202.7C420,192,480,160,540,160C600,160,660,192,720,192C780,192,840,160,900,165.3C960,171,1020,213,1080,218.7C1140,224,1200,192,1260,181.3C1320,171,1380,181,1410,186.7L1440,192L1440,320L1410,320C1380,320,1320,320,1260,320C1200,320,1140,320,1080,320C1020,320,960,320,900,320C840,320,780,320,720,320C660,320,600,320,540,320C480,320,420,320,360,320C300,320,240,320,180,320C120,320,60,320,30,320L0,320Z"></path>
+            </svg>
+            
+            <!-- Paw print decorations -->
+            <div class="absolute top-10 left-[10%] text-white/40 text-5xl">
+                <i class="fas fa-paw transform rotate-12"></i>
+            </div>
+            <div class="absolute top-40 right-[15%] text-white/40 text-4xl">
+                <i class="fas fa-paw transform -rotate-15"></i>
+            </div>
+        </div>
+        
+        <div class="container mx-auto px-6 pt-12 pb-32 relative z-10">
+            <div class="flex flex-col items-center justify-center text-center">
+                <div class="max-w-2xl">
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight">We Provide Better Care For Your Pets</h1>
+                    <p class="text-white/90 text-lg md:text-xl mb-10 mx-auto">
                         Give your clients the convenience of online booking, manage appointments effortlessly, and grow your veterinary practice with our all-in-one platform.
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="{{ route('register') }}" class="bg-white text-purple-500 px-6 py-3 rounded-md font-semibold hover:bg-gray-100 transition shadow-md flex items-center justify-center">
-                            <i class="fas fa-clinic-medical mr-2"></i> Register Your Clinic
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <a href="{{ route('register') }}" class="bg-white text-blue-500 px-8 py-4 rounded-md font-semibold hover:bg-gray-100 transition shadow-md flex items-center justify-center">
+                            <i class="fas fa-clinic-medical mr-2"></i> Book Now
                         </a>
-                        <a href="#demo-request" class="bg-transparent text-white border-2 border-white px-6 py-3 rounded-md font-semibold hover:bg-white/10 transition flex items-center justify-center">
-                            <i class="fas fa-laptop-medical mr-2"></i> Request a Demo
+                        <a href="#demo-request" class="bg-transparent text-white border-2 border-white px-8 py-4 rounded-md font-semibold hover:bg-white/10 transition flex items-center justify-center">
+                            <i class="fas fa-phone-alt mr-2"></i> Need Help? +1230001
                         </a>
                     </div>
                 </div>
-                <div class="md:w-1/2 flex justify-center">
-                    <img src="{{ asset('images/pic5.jpg') }}" alt="Veterinary Practice Management" class="rounded-lg shadow-xl w-full max-w-md border-4 border-white">
-                </div>
+            </div>
+            
+            <!-- Pagination dots -->
+            <div class="flex justify-center mt-12 space-x-2">
+                <span class="w-3 h-3 bg-white rounded-full"></span>
+                <span class="w-3 h-3 bg-white/50 rounded-full"></span>
+                <span class="w-3 h-3 bg-white/50 rounded-full"></span>
+                <span class="w-3 h-3 bg-white/50 rounded-full"></span>
             </div>
         </div>
     </div>
 
     <!-- Key Benefits for Clinics - Business focused -->
-    <div id="benefits" class="py-16 bg-white">
+    <div id="benefits" class="py-20 bg-white">
         <div class="container mx-auto px-6">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-gray-800">Why Veterinary Clinics Choose PurrfectPaw</h2>
-                <p class="text-gray-600 mt-2">Modernize your practice with our comprehensive clinic management solution</p>
+            <div class="text-center mb-16">
+                <span class="inline-block px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm font-semibold mb-3">WHY CHOOSE US</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">Why Veterinary Clinics Choose PurrfectPaw</h2>
+                <div class="w-24 h-1 bg-purple-400 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-600 mt-6 max-w-2xl mx-auto">Modernize your practice with our comprehensive clinic management solution</p>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-lg p-8 border border-gray-200 shadow-sm hover:shadow-md transition text-center">
-                    <div class="inline-flex items-center justify-center p-4 bg-lavender-100 rounded-full mb-6" style="background-color: #E6E6FA;">
-                        <i class="fas fa-calendar-check text-purple-500 text-2xl"></i>
+                <div class="bg-white rounded-xl p-8 border border-gray-100 shadow-md hover:shadow-xl transition duration-300 text-center feature-card">
+                    <div class="inline-flex items-center justify-center p-5 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-full mb-6">
+                        <i class="fas fa-calendar-check text-purple-500 text-3xl"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-3">24/7 Online Booking</h3>
                     <p class="text-gray-600">Give your clients the convenience of booking appointments anytime, reducing phone calls and administrative overhead.</p>
                 </div>
                 
-                <div class="bg-white rounded-lg p-8 border border-gray-200 shadow-sm hover:shadow-md transition text-center">
-                    <div class="inline-flex items-center justify-center p-4 rounded-full mb-6" style="background-color: #D8BFD8;">
-                        <i class="fas fa-users text-purple-500 text-2xl"></i>
+                <div class="bg-white rounded-xl p-8 border border-gray-100 shadow-md hover:shadow-xl transition duration-300 text-center feature-card">
+                    <div class="inline-flex items-center justify-center p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-full mb-6">
+                        <i class="fas fa-users text-purple-500 text-3xl"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-3">Expanded Client Base</h3>
                     <p class="text-gray-600">Join our network of trusted clinics and attract new patients through our platform's marketplace and referral system.</p>
                 </div>
                 
-                <div class="bg-white rounded-lg p-8 border border-gray-200 shadow-sm hover:shadow-md transition text-center">
-                    <div class="inline-flex items-center justify-center p-4 rounded-full mb-6" style="background-color: #B0C4DE;">
-                        <i class="fas fa-chart-line text-indigo-500 text-2xl"></i>
+                <div class="bg-white rounded-xl p-8 border border-gray-100 shadow-md hover:shadow-xl transition duration-300 text-center feature-card">
+                    <div class="inline-flex items-center justify-center p-5 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-full mb-6">
+                        <i class="fas fa-chart-line text-indigo-500 text-3xl"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-3">Reduced No-Shows</h3>
                     <p class="text-gray-600">Automated reminders and confirmation systems ensure clients remember their appointments, maximizing your schedule utilization.</p>
@@ -92,121 +146,137 @@
     </div>
     
     <!-- How It Works - Step by Step Process for Clinics -->
-    <div id="how-it-works" class="py-16" style="background-color: #F0F0FF;">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-gray-800">Get Your Clinic Online in Minutes</h2>
-                <p class="text-gray-600 mt-2">Join our network in three simple steps</p>
+    <div id="how-it-works" class="py-20 relative" style="background-color: #F0F0FF;">
+        <div class="absolute top-0 left-0 w-full h-24 bg-white" style="clip-path: ellipse(70% 100% at center top);"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center mb-16">
+                <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full text-sm font-semibold mb-3">GET STARTED</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">Get Your Clinic Online in Minutes</h2>
+                <div class="w-24 h-1 bg-indigo-400 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-600 mt-6 max-w-2xl mx-auto">Join our network in three simple steps</p>
             </div>
             
-            <div class="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-6">
-                <div class="flex flex-col items-center max-w-xs text-center">
-                    <div class="w-16 h-16 bg-purple-400 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4">1</div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Register Your Clinic</h3>
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-12 md:space-y-0 md:space-x-6">
+                <div class="flex flex-col items-center max-w-xs text-center transform transition-all duration-300 hover:scale-105">
+                    <div class="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">
+                        <span class="relative z-10">1</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Register Your Clinic</h3>
                     <p class="text-gray-600">Create your clinic profile with services, hours, and practitioner information.</p>
                 </div>
                 
-                <div class="hidden md:block w-12">
-                    <div class="h-1 bg-indigo-300 w-full rounded"></div>
+                <div class="hidden md:flex flex-col items-center justify-center w-24">
+                    <div class="h-1.5 bg-gradient-to-r from-purple-400 to-indigo-400 w-full rounded-full relative">
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col items-center max-w-xs text-center">
-                    <div class="w-16 h-16 bg-indigo-400 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4">2</div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Configure Settings</h3>
+                <div class="flex flex-col items-center max-w-xs text-center transform transition-all duration-300 hover:scale-105">
+                    <div class="w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">
+                        <span class="relative z-10">2</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Configure Settings</h3>
                     <p class="text-gray-600">Set up your availability, scheduling preferences, and appointment types.</p>
                 </div>
                 
-                <div class="hidden md:block w-12">
-                    <div class="h-1 bg-indigo-300 w-full rounded"></div>
+                <div class="hidden md:flex flex-col items-center justify-center w-24">
+                    <div class="h-1.5 bg-gradient-to-r from-indigo-400 to-purple-400 w-full rounded-full relative">
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col items-center max-w-xs text-center">
-                    <div class="w-16 h-16 bg-purple-400 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4">3</div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Start Accepting Bookings</h3>
+                <div class="flex flex-col items-center max-w-xs text-center transform transition-all duration-300 hover:scale-105">
+                    <div class="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">
+                        <span class="relative z-10">3</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Start Accepting Bookings</h3>
                     <p class="text-gray-600">Your clinic is now visible to pet owners who can book appointments online.</p>
                 </div>
             </div>
             
-            <div class="flex justify-center mt-12">
-                <a href="{{ route('register') }}" class="bg-indigo-400 text-white px-8 py-3 rounded-md font-semibold hover:bg-indigo-500 transition shadow-md">
-                    Join Our Network Today
+            <div class="flex justify-center mt-16">
+                <a href="{{ route('register') }}" class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-8 py-3.5 rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-600 transition shadow-lg flex items-center">
+                    <i class="fas fa-clinic-medical mr-2"></i> Join Our Network Today
                 </a>
             </div>
         </div>
+        <div class="absolute bottom-0 left-0 w-full h-24 bg-purple-50" style="clip-path: ellipse(70% 100% at center bottom);"></div>
     </div>
 
-    <!-- Features Section - Minimalist style for clinics -->
-    <div id="services" class="py-16 bg-white">
+    <!-- Features Section - Modern elegant style for clinics -->
+    <div id="features" class="py-20 bg-gradient-to-b from-white to-purple-50">
         <div class="container mx-auto px-6">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-gray-800">Platform Features</h2>
-                <p class="text-gray-600 mt-2">Powerful tools to modernize and grow your veterinary practice</p>
+            <div class="text-center mb-16">
+                <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full text-sm font-semibold mb-3">POWERFUL TOOLS</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">Platform Features</h2>
+                <div class="w-24 h-1 bg-indigo-400 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-600 mt-6 max-w-2xl mx-auto">Powerful tools to modernize and grow your veterinary practice</p>
             </div>
             
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <!-- Predefined feature cards with clinic-focused features -->
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-calendar-alt text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-purple-500 bg-purple-100 p-4 rounded-full">
+                        <i class="fas fa-calendar-alt text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Online Scheduling</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">24/7 online booking portal with customizable appointment types and durations.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Online Scheduling</h3>
+                    <p class="text-gray-600 text-sm text-center">24/7 online booking portal with customizable appointment types and durations.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-bell text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-indigo-500 bg-indigo-100 p-4 rounded-full">
+                        <i class="fas fa-bell text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Automated Reminders</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Reduce no-shows with automatic email and SMS appointment reminders.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Automated Reminders</h3>
+                    <p class="text-gray-600 text-sm text-center">Reduce no-shows with automatic email and SMS appointment reminders.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-file-medical text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-purple-500 bg-purple-100 p-4 rounded-full">
+                        <i class="fas fa-file-medical text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Medical Records</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Digital patient records with treatment history and medication tracking.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Medical Records</h3>
+                    <p class="text-gray-600 text-sm text-center">Digital patient records with treatment history and medication tracking.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-chart-line text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-indigo-500 bg-indigo-100 p-4 rounded-full">
+                        <i class="fas fa-chart-line text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Business Analytics</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Powerful reporting tools to track practice performance and growth.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Business Analytics</h3>
+                    <p class="text-gray-600 text-sm text-center">Powerful reporting tools to track practice performance and growth.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-comments text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-purple-500 bg-purple-100 p-4 rounded-full">
+                        <i class="fas fa-comments text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Client Communication</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Secure messaging system between clinic staff and pet owners.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Client Communication</h3>
+                    <p class="text-gray-600 text-sm text-center">Secure messaging system between clinic staff and pet owners.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-credit-card text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-indigo-500 bg-indigo-100 p-4 rounded-full">
+                        <i class="fas fa-credit-card text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Payment Processing</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Collect deposits and process payments securely online.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Payment Processing</h3>
+                    <p class="text-gray-600 text-sm text-center">Collect deposits and process payments securely online.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-mobile-alt text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-purple-500 bg-purple-100 p-4 rounded-full">
+                        <i class="fas fa-mobile-alt text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Mobile App</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Manage your clinic on the go with our dedicated mobile application.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Mobile App</h3>
+                    <p class="text-gray-600 text-sm text-center">Manage your clinic on the go with our dedicated mobile application.</p>
                 </div>
                 
-                <div class="bg-white hover:bg-purple-50 border border-gray-100 rounded-md transition duration-200 p-4 flex flex-col items-center">
-                    <div class="mb-3 text-purple-400">
-                        <i class="fas fa-calendar-check text-xl"></i>
+                <div class="bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 border border-gray-100 rounded-xl transition duration-300 p-6 flex flex-col items-center shadow-sm hover:shadow-md feature-card">
+                    <div class="mb-4 text-indigo-500 bg-indigo-100 p-4 rounded-full">
+                        <i class="fas fa-calendar-check text-2xl"></i>
                     </div>
-                    <h3 class="text-center text-gray-800 font-medium text-base mb-1">Inventory Management</h3>
-                    <p class="text-gray-500 text-xs text-center line-clamp-2">Track supplies, medications, and automatically generate reorder alerts.</p>
+                    <h3 class="text-center text-gray-800 font-semibold text-lg mb-2">Inventory Management</h3>
+                    <p class="text-gray-600 text-sm text-center">Track supplies, medications, and automatically generate reorder alerts.</p>
                 </div>
             </div>
         </div>
@@ -338,8 +408,8 @@
                 </div>
                 
                 <!-- Need Help Card -->
-                <div class="bg-white rounded-lg overflow-hidden shadow-sm border border-purple-100 transition hover:shadow-md">
-                    <div class="p-6 bg-gray-50 border-b border-gray-100">
+                <div class="bg-white rounded-lg overflow-hidden shadow-sm border border-purple-100 transition hover:shadow-lg">
+                    <div class="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-100">
                         <h3 class="text-2xl font-bold text-gray-800">Need Help?</h3>
                         <div class="mt-4">
                             <p class="text-gray-600">Not sure which option is best for your clinic?</p>
@@ -348,21 +418,27 @@
                     <div class="p-6">
                         <p class="text-gray-700 mb-6">Our team can help you choose the right plan and answer any questions you have about our veterinary practice management system.</p>
                         <div class="space-y-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-phone-alt text-purple-500 mr-3"></i>
+                            <div class="flex items-center p-3 hover:bg-purple-50 rounded-lg transition">
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-phone-alt text-purple-500"></i>
+                                </div>
                                 <span class="text-gray-700">+63 (2) 8888-7777</span>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-envelope text-purple-500 mr-3"></i>
-                                <span class="text-gray-700">sales@purrfectpaw.com</span>
+                            <div class="flex items-center p-3 hover:bg-purple-50 rounded-lg transition">
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-envelope text-purple-500"></i>
+                                </div>
+                                <span class="text-gray-700">purrf3ctpaw@gmail.com</span>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-calendar-check text-purple-500 mr-3"></i>
+                            <div class="flex items-center p-3 hover:bg-purple-50 rounded-lg transition">
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-calendar-check text-purple-500"></i>
+                                </div>
                                 <span class="text-gray-700">Book a demo</span>
                             </div>
                         </div>
                         <div class="mt-8">
-                            <a href="#demo-request" class="block w-full bg-purple-100 text-purple-700 text-center px-4 py-3 rounded-md font-semibold hover:bg-purple-200 transition">
+                            <a href="#demo-request" class="block w-full bg-gradient-to-r from-purple-400 to-indigo-400 text-white text-center px-4 py-3 rounded-lg font-semibold hover:from-purple-500 hover:to-indigo-500 transition shadow-md">
                                 Contact Sales
                             </a>
                         </div>
@@ -523,24 +599,24 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
                     <div class="flex items-center mb-4">
-                        <img src="{{ asset('images/pic5.jpg') }}" alt="PurrfectPaw" class="h-10 w-10 rounded-full object-cover border-2 border-purple-400 mr-3">
-                        <span class="text-xl font-bold">PurrfectPaw</span>
+                        <img src="{{ asset('images/pet-logo.png') }}" alt="PurrfectPaw" class="h-10 mr-2">
+                        <span class="text-small font-bold">PurrfectPaw</span>
                     </div>
                     <p class="text-indigo-200">Comprehensive practice management platform for modern veterinary clinics.</p>
                     <div class="flex space-x-4 mt-6">
-                        <a href="https://www.facebook.com" target="_blank" class="text-indigo-300 hover:text-white transition">
+                        <a href="https://www.facebook.com" target="_blank" class="text-black-300 hover:text-white transition">
                             <i class="fab fa-facebook-f"></i>
                         </a>
-                        <a href="https://www.twitter.com" target="_blank" class="text-indigo-300 hover:text-white transition">
+                        <a href="https://www.twitter.com" target="_blank" class="text-black-300 hover:text-white transition">
                             <i class="fab fa-twitter"></i>
                         </a>
-                        <a href="https://www.instagram.com" target="_blank" class="text-indigo-300 hover:text-white transition">
+                        <a href="https://www.instagram.com" target="_blank" class="text-black-300 hover:text-white transition">
                             <i class="fab fa-instagram"></i>
                         </a>
-                        <a href="https://www.linkedin.com" target="_blank" class="text-indigo-300 hover:text-white transition">
+                        <a href="https://www.linkedin.com" target="_blank" class="text-black-300 hover:text-white transition">
                             <i class="fab fa-linkedin-in"></i>
                         </a>
-                        <a href="https://www.youtube.com" target="_blank" class="text-indigo-300 hover:text-white transition">
+                        <a href="https://www.youtube.com" target="_blank" class="text-black-300 hover:text-white transition">
                             <i class="fab fa-youtube"></i>
                         </a>
                     </div>
@@ -574,19 +650,19 @@
                     <ul class="space-y-2">
                         <li class="flex items-start">
                             <i class="fas fa-envelope text-purple-400 mt-1 mr-2"></i>
-                            <span class="text-indigo-200">sales@purrfectpaw.com</span>
+                            <span class="text-indigo-200">purrf3ctpaw@gmail.com</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-phone-alt text-purple-400 mt-1 mr-2"></i>
-                            <span class="text-indigo-200">+1 (555) 123-4567</span>
+                            <span class="text-indigo-200">+63 (2) 8888-7777</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-headset text-purple-400 mt-1 mr-2"></i>
-                            <span class="text-indigo-200">Support: +1 (555) 987-6543</span>
+                            <span class="text-indigo-200">Support: +63 (2) 8888-7777</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-map-marker-alt text-purple-400 mt-1 mr-2"></i>
-                            <span class="text-indigo-200">123 Business Plaza, Suite 500<br>Tech City, TC 12345</span>
+                            <span class="text-indigo-200">123 Business Plaza, Suite 500<br>Manila, Philippines</span>
                         </li>
                     </ul>
                 </div>
@@ -613,5 +689,129 @@
         outline: 2px solid #0d9488;
         outline-offset: 2px;
     }
+    
+    /* Hero image enhancements */
+    .hero-image-container {
+        position: relative;
+        transition: transform 0.3s ease;
+    }
+    
+    .hero-image-container:hover {
+        transform: translateY(-5px);
+    }
+    
+    /* Improved card hover effects */
+    .feature-card {
+        transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.1), 0 10px 10px -5px rgba(124, 58, 237, 0.04);
+    }
+    
+    /* Modern section transitions */
+    .section-transition {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Custom styling for pricing toggle */
+    .pricing-toggle {
+        position: relative;
+        display: inline-flex;
+        border-radius: 9999px;
+        background-color: #f3f4f6;
+        padding: 0.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .pricing-toggle-option {
+        position: relative;
+        z-index: 10;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .pricing-toggle-option.active {
+        color: white;
+    }
+    
+    .pricing-toggle-slider {
+        position: absolute;
+        left: 0.25rem;
+        top: 0.25rem;
+        height: calc(100% - 0.5rem);
+        border-radius: 9999px;
+        background-color: #8b5cf6;
+        transition: all 0.3s ease;
+    }
+    
+    /* Social media links side panel */
+    .social-panel {
+        transition: all 0.3s ease;
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .social-panel a {
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+    
+    .social-panel:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .social-panel a:hover i.fa-facebook-f {
+        color: #1877f2;
+    }
+    
+    .social-panel a:hover i.fa-twitter {
+        color: #1da1f2;
+    }
+    
+    .social-panel a:hover i.fa-instagram {
+        color: #e1306c;
+    }
+    
+    .social-panel a:hover i.fa-youtube {
+        color: #ff0000;
+    }
+    
+    .social-panel a:hover i.fa-envelope {
+        color: #ffd700;
+    }
+    
+    /* Floating paw animations */
+    @keyframes float {
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
+    }
+    
+    .floating-paw {
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .floating-paw:nth-child(2) {
+        animation-delay: 1s;
+    }
+    
+    .floating-paw:nth-child(3) {
+        animation-delay: 2s;
+    }
 </style>
+@endpush
+
+@push('scripts')
+<script src="{{ asset('js/social-links.js') }}"></script>
 @endpush

@@ -12,33 +12,42 @@
         });
     </script>
     
-    <div class="py-12 bg-gray-100 min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
+    <div class="py-6 bg-gray-100 min-h-screen">
+        <div class="px-4 sm:px-6 lg:px-8 flex">
 
             {{-- Sidebar --}}
-            <div class="w-1/4">
+            <div class="w-64 flex-shrink-0 mr-6">
                 @include('clinic.components.sidebar')
             </div>
 
             {{-- Main Content --}}
-            <div class="w-3/4">
-                <div class="bg-white shadow-xl rounded-lg p-8 mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Manage Availability & Scheduling</h2>
-                    <div class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-flex items-center mb-4">
+            <div class="flex-1">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div class="mb-4 md:mb-0">
+                        <h2 class="text-xl md:text-2xl font-semibold text-gray-800">Manage Availability & Scheduling</h2>
+                        <p class="text-gray-500 text-sm mt-1">Set your clinic hours and manage special dates</p>
+                    </div>
+                    
+                    <div class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Current Timezone: Asia/Manila (UTC+8)
                     </div>
+                </div>
+
+                <div class="bg-white shadow-lg border border-gray-200 rounded-lg p-6 mb-6">
                     
                     @if(session('success'))
-                        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
+                        <div class="bg-green-100 border border-green-300 rounded-lg shadow-sm text-green-700 p-4 mb-6 flex items-center" role="alert">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
                             <p>{{ session('success') }}</p>
                         </div>
                     @endif
                     
                     @if(session('error'))
-                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+                        <div class="bg-red-100 border border-red-300 rounded-lg shadow-sm text-red-700 p-4 mb-6 flex items-center" role="alert">
+                            <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
                             <p>{{ session('error') }}</p>
                         </div>
                     @endif
@@ -46,7 +55,10 @@
                     {{-- Weekly Schedule Section --}}
                     
                     {{-- Weekly Schedule --}}
-                    <h3 class="text-xl font-semibold mb-4">Weekly Schedule</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calendar-week mr-2 text-blue-600"></i>
+                        Weekly Schedule
+                    </h3>
                     
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 mb-6">
@@ -169,8 +181,11 @@
                 </div>
                 
                 {{-- Break Times --}}
-                <div class="bg-white shadow-xl rounded-lg p-8 mb-6">
-                    <h3 class="text-xl font-semibold mb-4">Break Times</h3>
+                <div class="bg-white shadow-lg border border-gray-200 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-coffee mr-2 text-orange-500"></i>
+                        Break Times
+                    </h3>
                     <p class="text-gray-600 mb-4">Define break periods (lunch, meetings, etc.) when appointments cannot be scheduled.</p>
                     
                     <form action="{{ route('clinic.availability.breaks.store') }}" method="POST" class="mb-6">
@@ -215,8 +230,8 @@
                         </div>
                         
                         <div class="mt-4">
-                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                                Add Break
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 flex items-center">
+                                <i class="fas fa-plus mr-2"></i> Add Break
                             </button>
                         </div>
                     </form>
@@ -261,8 +276,11 @@
                 </div>
                 
                 {{-- Special Dates / Holidays --}}
-                <div class="bg-white shadow-xl rounded-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Special Dates & Holidays</h3>
+                <div class="bg-white shadow-lg border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calendar-alt mr-2 text-red-500"></i>
+                        Special Dates & Holidays
+                    </h3>
                     <p class="text-gray-600 mb-4">Mark specific dates as closed or with special operating hours.</p>
                     
                     <form id="specialDateForm" action="{{ route('clinic.availability.special-dates.store') }}" method="POST" class="mb-6">

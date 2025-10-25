@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\ClinicInfo;
 use App\Services\Notification\NotificationService;
+use App\Services\SmsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -105,8 +106,71 @@ class AppointmentController extends Controller
             'status' => 'required|in:assigned,confirmed,in_progress,completed,closed,cancelled',
         ]);
         
+        $oldStatus = $appointment->status;
         $appointment->status = $request->status;
         $appointment->save();
+        
+        // Send SMS notification when doctor confirms appointment
+        if ($request->status === 'confirmed' && $oldStatus !== 'confirmed' && $appointment->owner_phone) {
+            try {
+                $smsService = app(SmsService::class);
+                
+                // Get clinic information
+                $clinic = $appointment->clinic;
+                
+                // Prepare appointment data for SMS
+                $appointmentData = [
+                    'clinic_name' => $clinic ? $clinic->clinic_name : 'AutoRepair Clinic',
+                    'appointment_date' => $appointment->appointment_date ? 
+                        \Carbon\Carbon::parse($appointment->appointment_date)->format('F j, Y') : '',
+                    'appointment_time' => $appointment->formatted_time ?? '',
+                    'doctor_name' => $doctor->name ?? 'Available Doctor',
+                    'pet_name' => $appointment->owner_name ?? 'your pet'
+                ];
+                
+                $result = $smsService->sendAppointmentConfirmation($appointment->owner_phone, $appointmentData);
+                
+                if ($result['success']) {
+                    Log::info('Doctor appointment confirmation SMS sent successfully', [
+                        'appointment_id' => $appointment->id,
+                        'doctor_id' => $doctor->id,
+                        'phone' => $appointment->owner_phone
+                    ]);
+                } else {
+                    Log::error('Failed to send doctor appointment confirmation SMS', [
+                        'appointment_id' => $appointment->id,
+                        'doctor_id' => $doctor->id,
+                        'phone' => $appointment->owner_phone,
+                        'error' => $result['error'] ?? 'Unknown error'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('SMS service error during doctor appointment confirmation: ' . $e->getMessage(), [
+                    'appointment_id' => $appointment->id,
+                    'doctor_id' => $doctor->id,
+                    'phone' => $appointment->owner_phone
+                ]);
+            }
+        }
+        
+        // Send SMS notification when doctor cancels appointment
+        if ($request->status === 'cancelled' && $oldStatus !== 'cancelled' && $appointment->owner_phone) {
+            try {
+                $smsService = app(SmsService::class);
+                $clinic = $appointment->clinic;
+                
+                $appointmentData = [
+                    'clinic_name' => $clinic ? $clinic->clinic_name : 'AutoRepair Clinic',
+                    'appointment_date' => $appointment->appointment_date ? 
+                        \Carbon\Carbon::parse($appointment->appointment_date)->format('F j, Y') : '',
+                    'appointment_time' => $appointment->formatted_time ?? ''
+                ];
+                
+                $smsService->sendAppointmentCancellation($appointment->owner_phone, $appointmentData);
+            } catch (\Exception $e) {
+                Log::error('SMS service error during doctor appointment cancellation: ' . $e->getMessage());
+            }
+        }
         
         return redirect()->route('doctor.appointments.show', $id)
             ->with('success', 'Appointment status updated successfully');

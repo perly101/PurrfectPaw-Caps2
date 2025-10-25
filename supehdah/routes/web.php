@@ -212,6 +212,13 @@ Route::prefix('test')->group(function () {
     Route::get('/global-notifications', function() {
         return view('test.global-notification-test');
     })->name('test.global-notifications');
+    
+    // SMS Test Routes
+    Route::get('/sms', [\App\Http\Controllers\Test\SmsTestController::class, 'test'])->name('test.sms');
+    Route::get('/sms/appointment-confirmation', [\App\Http\Controllers\Test\SmsTestController::class, 'testAppointmentConfirmation'])->name('test.sms.appointment-confirmation');
+    Route::get('/sms/page', function() {
+        return view('test.sms-test');
+    })->name('test.sms.page');
 });
 
 // ========== DOCTOR ROUTES ==========
@@ -246,3 +253,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Include SMS test routes (for development only)
+if (app()->environment('local')) {
+    require __DIR__.'/sms-test.php';
+    require __DIR__.'/sms-test-simple.php';
+    require __DIR__.'/debug-fields.php';
+}
