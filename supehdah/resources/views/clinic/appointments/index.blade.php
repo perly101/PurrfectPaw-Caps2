@@ -17,6 +17,16 @@
                     <div class="mb-4 md:mb-0">
                         <h2 class="text-xl md:text-2xl font-semibold text-gray-800">Appointment Management</h2>
                         <p class="text-gray-500 text-sm mt-1">View and manage all clinic appointments</p>
+                        <div class="mt-2 flex space-x-2">
+                            <div class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full inline-flex items-center">
+                                <i class="fas fa-calendar-day mr-1"></i>
+                                Same-Day Booking Policy Active
+                            </div>
+                            <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full inline-flex items-center">
+                                <i class="fas fa-clock mr-1"></i>
+                                Timezone: Asia/Manila (UTC+8)
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="flex space-x-2">
@@ -74,16 +84,31 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if($appointment->appointment_date)
-                                                <div class="text-sm text-gray-700">
-                                                    {{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}
+                                                <div class="text-sm text-gray-700 font-medium">
+                                                    {{ \Carbon\Carbon::parse($appointment->appointment_date)->setTimezone('Asia/Manila')->format('M d, Y') }}
                                                 </div>
                                                 <div class="text-xs bg-blue-100 text-blue-800 inline-flex rounded-full px-2 py-1 mt-1">
-                                                    {{ $appointment->appointment_time ?? 'No time set' }}
+                                                    @if($appointment->appointment_time)
+                                                        @php
+                                                            // Handle proper date/time parsing - assume stored time is in Manila timezone
+                                                            $date = \Carbon\Carbon::parse($appointment->appointment_date)->format('Y-m-d');
+                                                            $datetime = $date . ' ' . $appointment->appointment_time;
+                                                        @endphp
+                                                        {{ \Carbon\Carbon::parse($datetime, 'Asia/Manila')->format('h:i A') }}
+                                                    @else
+                                                        No time set
+                                                    @endif
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    <i class="fas fa-clock mr-1"></i>Asia/Manila (UTC+8)
                                                 </div>
                                             @else
                                                 <span class="text-sm text-gray-500">
-                                                    {{ $appointment->created_at->format('M d, Y') }}
+                                                    {{ $appointment->created_at->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}
                                                 </span>
+                                                <div class="text-xs text-gray-400">
+                                                    <i class="fas fa-info-circle mr-1"></i>Created (UTC+8)
+                                                </div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

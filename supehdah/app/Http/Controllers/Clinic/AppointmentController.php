@@ -33,7 +33,8 @@ class AppointmentController extends Controller
                 WHEN status = 'confirmed' THEN 3
                 WHEN status = 'closed' THEN 4
                 ELSE 5 END")
-            ->orderBy('created_at', 'desc')
+            ->orderBy('appointment_date', 'desc')
+            ->orderBy('appointment_time', 'desc')
             ->paginate(15);
             
         return view('clinic.appointments.index', compact('appointments', 'clinic'));

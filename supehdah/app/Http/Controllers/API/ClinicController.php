@@ -30,4 +30,33 @@ class ClinicController extends Controller
             
         return response()->json(['data' => $clinics]);
     }
+
+    public function getConfig($clinicId)
+    {
+        $clinic = ClinicInfo::find($clinicId);
+        
+        if (!$clinic) {
+            return response()->json(['error' => 'Clinic not found'], 404);
+        }
+
+        // Slot color configuration
+        $config = [
+            'slotColors' => [
+                'available' => '#28a745',  // Green
+                'booked' => '#dc3545',     // Red
+                'past' => '#6c757d',       // Gray
+                'closed' => '#ffc107'      // Yellow
+            ],
+            'timezone' => 'Asia/Manila',
+            'defaultSlotDurationMinutes' => 30,
+            'sameDayBookingOnly' => true,
+            'clinic' => [
+                'id' => $clinic->id,
+                'name' => $clinic->clinic_name,
+                'timezone' => 'Asia/Manila'
+            ]
+        ];
+
+        return response()->json($config);
+    }
 }

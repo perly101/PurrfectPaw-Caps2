@@ -9,7 +9,32 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize the UI
             console.log('UI initialized');
+            
+            // Start real-time clock
+            updateLiveDateTime();
+            setInterval(updateLiveDateTime, 1000);
         });
+
+        // Real-time clock function for Philippines timezone
+        function updateLiveDateTime() {
+            const now = new Date();
+            const options = {
+                timeZone: 'Asia/Manila',
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            
+            const philippinesTime = now.toLocaleString('en-US', options);
+            const element = document.getElementById('liveDateTime');
+            if (element) {
+                element.textContent = philippinesTime;
+            }
+        }
     </script>
     
     <div class="py-6 bg-gray-100 min-h-screen">
@@ -28,11 +53,27 @@
                         <p class="text-gray-500 text-sm mt-1">Set your clinic hours and manage special dates</p>
                     </div>
                     
-                    <div class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Current Timezone: Asia/Manila (UTC+8)
+                    <div class="flex space-x-3">
+                        <div class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Current Timezone: Asia/Manila (UTC+8)
+                        </div>
+                        
+                        <div class="text-sm bg-green-50 text-green-600 px-3 py-1 rounded-full inline-flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span id="liveDateTime">Loading...</span>
+                        </div>
+                        
+                        <div class="text-sm bg-orange-50 text-orange-600 px-3 py-1 rounded-full inline-flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Same-Day Booking Only
+                        </div>
                     </div>
                 </div>
 
@@ -109,9 +150,14 @@
                     </div>
                     
                     {{-- Edit Day Modal (Using simple JS toggle, can be enhanced with Alpine.js) --}}
-                    <div id="editDayModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center">
-                        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-                            <h4 class="text-lg font-bold mb-4">Edit Schedule for <span id="modalDayName"></span></h4>
+                    <div id="editDayModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onclick="closeModal()">
+                        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onclick="event.stopPropagation()">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-bold">Edit Schedule for <span id="modalDayName"></span></h4>
+                                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
                             
                             <form id="dayScheduleForm" action="{{ route('clinic.availability.daily') }}" method="POST">
                                 @csrf
@@ -522,11 +568,15 @@
             toggleHoursVisibility();
             
             // Show modal
-            document.getElementById('editDayModal').classList.remove('hidden');
+            const modal = document.getElementById('editDayModal');
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
         }
         
         function closeModal() {
-            document.getElementById('editDayModal').classList.add('hidden');
+            const modal = document.getElementById('editDayModal');
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
         }
         
         // Wait for DOM to be fully loaded

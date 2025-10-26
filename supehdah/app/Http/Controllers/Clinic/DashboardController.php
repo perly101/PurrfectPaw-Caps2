@@ -36,9 +36,10 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->count();
             
-        // Get today's appointments
+        // Get today's appointments - use Philippines timezone
+        $todayPhilippines = Carbon::now('Asia/Manila')->format('Y-m-d');
         $todayAppointmentsCount = Appointment::where('clinic_id', $clinic->id)
-            ->whereDate('appointment_date', Carbon::today())
+            ->whereDate('appointment_date', $todayPhilippines)
             ->count();
             
         // Get total completed appointments

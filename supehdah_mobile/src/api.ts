@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 
 // Use only a single fixed API base URL
 const API_BASE_URLS = [
-  'http://192.168.1.5:8000/api', // Local network - update with your actual IP
+  'http://192.168.254.105:8000/api', // Local network - update with your actual IP
   'http://localhost:8000/api'    // For web debugging
 ];
 

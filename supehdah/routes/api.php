@@ -47,6 +47,9 @@ Route::get('/clinics/{clinic}/gallery', [ClinicGalleryController::class, 'index'
 //clinic mode  appointment
 
 Route::get('/clinics/{clinic}/fields', [ClinicFieldApiController::class, 'index']);
+Route::get('/clinics/{clinic}/config', [ClinicController::class, 'getConfig']);
+
+//clinic mode  appointment
 
 // Clinic Fields Management API (for clinic owners)
 Route::middleware('auth:sanctum')->group(function () {

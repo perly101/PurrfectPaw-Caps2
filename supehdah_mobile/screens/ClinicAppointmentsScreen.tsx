@@ -361,8 +361,14 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
       setError(null);
       
       // Get the selected date and time - prioritize values from state which may include calendar selections
-      const selectedDate = values.appointment_date || new Date().toISOString().split('T')[0];
-      const selectedTime = values.appointment_time || '10:00';
+      const selectedDate = values.appointment_date || calendarDate || new Date().toISOString().split('T')[0];
+      const selectedTime = values.appointment_time || calendarTimeSlot?.start || '10:00';
+      
+      console.log('DEBUG APPOINTMENT TIME:', {
+        'values.appointment_time': values.appointment_time,
+        'calendarTimeSlot?.start': calendarTimeSlot?.start,
+        'finalSelectedTime': selectedTime
+      });
       
       console.log('Submitting appointment with date:', selectedDate, 'and time:', selectedTime);
       
@@ -380,17 +386,47 @@ export default function ClinicAppointmentsScreen({ route, navigation }: ClinicAp
       
       // Force a refresh for this date in the calendar screen for all users
       try {
-        // Mark this date/time as booked in local storage
-        const bookedKey = `booked_${clinicId}_${selectedDate}_${selectedTime}`;
-        await AsyncStorage.setItem(bookedKey, 'true');
+        // Mark this date/time as booked in local storage using the correct format
+        const localBookingsKey = `localBookings_${clinicId}_${selectedDate}`;
+        
+        // Get existing local bookings or create empty array
+        const existingBookingsStr = await AsyncStorage.getItem(localBookingsKey);
+        const existingBookings = existingBookingsStr ? JSON.parse(existingBookingsStr) : [];
+        
+        // Add this booking to the array
+        const newBooking = {
+          appointment_time: selectedTime,
+          appointment_date: selectedDate,
+          owner_name: ownerName.trim(),
+          booked_at: new Date().toISOString()
+        };
+        
+        // Check if this booking already exists to avoid duplicates
+        const bookingExists = existingBookings.some((booking: any) => 
+          booking.appointment_time === selectedTime && booking.appointment_date === selectedDate
+        );
+        
+        if (!bookingExists) {
+          existingBookings.push(newBooking);
+          await AsyncStorage.setItem(localBookingsKey, JSON.stringify(existingBookings));
+        }
         
         // Set refresh markers to force calendar to refresh
         const refreshKey = `refresh_calendar_${clinicId}_${selectedDate}`;
         await AsyncStorage.setItem(refreshKey, new Date().toISOString());
         
-        console.log('Set refresh marker for calendar to refresh booked slots');
+        // Clear cache to force fresh data fetch
+        await AsyncStorage.removeItem(`slots_cache_${clinicId}_${selectedDate}`);
+        
+        console.log('✅ BOOKING SAVED LOCALLY:', newBooking);
+        console.log('📱 Storage key used:', localBookingsKey);
+        
+        // Verify it was saved
+        const verification = await AsyncStorage.getItem(localBookingsKey);
+        console.log('🔍 Verification - saved data:', verification);
+        
       } catch (e) {
-        console.log('Error setting refresh markers', e);
+        console.log('❌ Error setting refresh markers', e);
       }
       
       // Show success alert

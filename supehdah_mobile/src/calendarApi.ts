@@ -302,6 +302,19 @@ export const getAvailabilityCalendarSlots = async (clinicId: number, date: strin
       const response = await tryMultipleBaseUrls(mainEndpoint);
       console.log(`Success with multiple base URLs method for availability slots`);
       
+      // Check if clinic is closed on this day
+      if (response.data?.data?.is_available === false || response.data?.is_available === false) {
+        console.log('Clinic is closed on this day:', response.data?.data?.message || response.data?.message || 'No slots available');
+        return {
+          slots: [],
+          totalSlots: 0,
+          availableSlots: 0,
+          bookedSlots: 0,
+          is_available: false,
+          message: response.data?.data?.message || response.data?.message || 'The clinic is closed on this day.'
+        };
+      }
+      
       let slots = [];
       let totalSlots = 0;
       let availableSlots = 0;

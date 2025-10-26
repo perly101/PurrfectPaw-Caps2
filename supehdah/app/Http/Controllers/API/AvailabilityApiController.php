@@ -161,13 +161,28 @@ class AvailabilityApiController extends Controller
             ]);
         }
         
-        $slots = $this->calculateAvailableSlots($clinic, $carbon_date);
-        
-        // Get daily limit for this specific day
+        // Check if the clinic is closed on this specific day first
         $dayOfWeek = $carbon_date->format('l'); // Get day name (Monday, Tuesday, etc.)
         $dailySchedule = ClinicDailySchedule::where('clinic_id', $clinic->id)
             ->where('day_of_week', $dayOfWeek)
             ->first();
+            
+        // Check if it's a special closed date
+        $specialDate = ClinicSpecialDate::where('clinic_id', $clinic->id)
+            ->where('date', $carbon_date->format('Y-m-d'))
+            ->first();
+            
+        if (($specialDate && $specialDate->is_closed) || ($dailySchedule && $dailySchedule->is_closed)) {
+            return response()->json([
+                'data' => [
+                    'is_available' => false,
+                    'message' => 'The clinic is closed on this day.',
+                    'slots' => [],
+                ]
+            ]);
+        }
+
+        $slots = $this->calculateAvailableSlots($clinic, $carbon_date);
             
         // Get the correct daily limit (from day-specific setting or from general settings)
         $settings = ClinicAvailabilitySetting::where('clinic_id', $clinic->id)->first();
@@ -220,14 +235,32 @@ class AvailabilityApiController extends Controller
         // Log this information for debugging
         \Illuminate\Support\Facades\Log::info("Daily limit: $dailyLimit, Total slots: $totalSlotCount, Available: $availableCount, Booked: $appointmentCount");
         
+        // Create a complete slots array that includes both available and booked slots
+        $completeSlots = [];
+        $bookedTimes = $appointments->pluck('appointment_time')->toArray();
+        
+        // Get all possible slots
+        foreach ($allPossibleSlots as $slot) {
+            $isBooked = in_array($slot['start'], $bookedTimes);
+            $completeSlots[] = [
+                'start' => $slot['start'],
+                'end' => $slot['end'], 
+                'display_time' => $slot['display_time'],
+                'duration' => $slot['duration'],
+                'isBooked' => $isBooked,
+                'status' => $isBooked ? 'booked' : 'available'
+            ];
+        }
+        
         return response()->json([
-            'slots' => $availableSlots,
+            'slots' => $completeSlots, // Now includes both available AND booked slots
             'totalSlots' => $totalSlotCount,
             'availableSlots' => $availableCount,
             'bookedSlots' => $appointmentCount,
             'daily_limit' => $dailyLimit,
             'is_available' => $availableCount > 0,
-            'date' => $date
+            'date' => $date,
+            'booked_times' => $bookedTimes // Add this for debugging
         ]);
     }
     
@@ -259,8 +292,8 @@ class AvailabilityApiController extends Controller
         // Get operating hours
         if ($specialDate && $specialDate->start_time) {
             // Use special date hours
-            $startTime = Carbon::parse($specialDate->start_time, 'UTC');
-            $endTime = Carbon::parse($specialDate->end_time, 'UTC');
+            $startTime = Carbon::parse($specialDate->start_time, 'Asia/Manila');
+            $endTime = Carbon::parse($specialDate->end_time, 'Asia/Manila');
         } else {
             // Use regular schedule for this day of week
             $dailySchedule = ClinicDailySchedule::where('clinic_id', $clinic->id)
@@ -269,13 +302,13 @@ class AvailabilityApiController extends Controller
                 
             if (!$dailySchedule) {
                 // Use default settings
-                $startTime = Carbon::parse($settings->default_start_time, 'UTC');
-                $endTime = Carbon::parse($settings->default_end_time, 'UTC');
+                $startTime = Carbon::parse($settings->default_start_time, 'Asia/Manila');
+                $endTime = Carbon::parse($settings->default_end_time, 'Asia/Manila');
             } elseif ($dailySchedule->is_closed) {
                 return []; // Clinic is closed on this day
             } else {
-                $startTime = Carbon::parse($dailySchedule->start_time, 'UTC');
-                $endTime = Carbon::parse($dailySchedule->end_time, 'UTC');
+                $startTime = Carbon::parse($dailySchedule->start_time, 'Asia/Manila');
+                $endTime = Carbon::parse($dailySchedule->end_time, 'Asia/Manila');
             }
         }
         
@@ -290,19 +323,24 @@ class AvailabilityApiController extends Controller
             $slotDuration = $dailySchedule->slot_duration;
         }
         
-        // Generate all possible slots
+        // Generate all possible slots strictly within the operating hours
         $slots = [];
         $current = clone $startTime;
         
         while ($current->lt($endTime)) {
             $slotEnd = (clone $current)->addMinutes($slotDuration);
             
+            // Ensure the ENTIRE slot (start to end) is within operating hours
             if ($slotEnd->lte($endTime)) {
                 $slots[] = [
-                    'start' => $current->format('H:i'),
-                    'end' => $slotEnd->format('H:i'),
+                    'start' => $current->format('H:i:s'),
+                    'end' => $slotEnd->format('H:i:s'),
                     'display_time' => $current->format('g:i A') . ' - ' . $slotEnd->format('g:i A'),
+                    'duration' => $slotDuration,
                 ];
+            } else {
+                // Stop if adding this slot would exceed the end time
+                break;
             }
             
             $current = $slotEnd;
@@ -317,13 +355,13 @@ class AvailabilityApiController extends Controller
             ->get();
             
         foreach ($breaks as $break) {
-            $breakStart = Carbon::parse($break->start_time, 'UTC');
-            $breakEnd = Carbon::parse($break->end_time, 'UTC');
+            $breakStart = Carbon::parse($break->start_time, 'Asia/Manila');
+            $breakEnd = Carbon::parse($break->end_time, 'Asia/Manila');
             
             // Filter out slots that overlap with this break
             $slots = array_filter($slots, function($slot) use ($breakStart, $breakEnd) {
-                $slotStart = Carbon::parse($slot['start'], 'UTC');
-                $slotEnd = Carbon::parse($slot['end'], 'UTC');
+                $slotStart = Carbon::parse($slot['start'], 'Asia/Manila');
+                $slotEnd = Carbon::parse($slot['end'], 'Asia/Manila');
                 
                 // Check if slot is entirely before break or entirely after break
                 return $slotEnd->lte($breakStart) || $slotStart->gte($breakEnd);
@@ -359,8 +397,8 @@ class AvailabilityApiController extends Controller
         // Get operating hours
         if ($specialDate && $specialDate->start_time) {
             // Use special date hours
-            $startTime = Carbon::parse($specialDate->start_time, 'UTC');
-            $endTime = Carbon::parse($specialDate->end_time, 'UTC');
+            $startTime = Carbon::parse($specialDate->start_time, 'Asia/Manila');
+            $endTime = Carbon::parse($specialDate->end_time, 'Asia/Manila');
         } else {
             // Use regular schedule for this day of week
             $dailySchedule = ClinicDailySchedule::where('clinic_id', $clinic->id)
@@ -369,13 +407,13 @@ class AvailabilityApiController extends Controller
                 
             if (!$dailySchedule) {
                 // Use default settings
-                $startTime = Carbon::parse($settings->default_start_time, 'UTC');
-                $endTime = Carbon::parse($settings->default_end_time, 'UTC');
+                $startTime = Carbon::parse($settings->default_start_time, 'Asia/Manila');
+                $endTime = Carbon::parse($settings->default_end_time, 'Asia/Manila');
             } elseif ($dailySchedule->is_closed) {
                 return []; // Clinic is closed on this day
             } else {
-                $startTime = Carbon::parse($dailySchedule->start_time, 'UTC');
-                $endTime = Carbon::parse($dailySchedule->end_time, 'UTC');
+                $startTime = Carbon::parse($dailySchedule->start_time, 'Asia/Manila');
+                $endTime = Carbon::parse($dailySchedule->end_time, 'Asia/Manila');
             }
         }
         
@@ -390,19 +428,24 @@ class AvailabilityApiController extends Controller
             $slotDuration = $dailySchedule->slot_duration;
         }
         
-        // Generate all possible slots
+        // Generate all possible slots strictly within the operating hours
         $slots = [];
         $current = clone $startTime;
         
         while ($current->lt($endTime)) {
             $slotEnd = (clone $current)->addMinutes($slotDuration);
             
+            // Ensure the ENTIRE slot (start to end) is within operating hours
             if ($slotEnd->lte($endTime)) {
                 $slots[] = [
-                    'start' => $current->format('H:i'),
-                    'end' => $slotEnd->format('H:i'),
+                    'start' => $current->format('H:i:s'),
+                    'end' => $slotEnd->format('H:i:s'),
                     'display_time' => $current->format('g:i A') . ' - ' . $slotEnd->format('g:i A'),
+                    'duration' => $slotDuration,
                 ];
+            } else {
+                // Stop if adding this slot would exceed the end time
+                break;
             }
             
             $current = $slotEnd;
@@ -417,13 +460,13 @@ class AvailabilityApiController extends Controller
             ->get();
             
         foreach ($breaks as $break) {
-            $breakStart = Carbon::parse($break->start_time, 'UTC');
-            $breakEnd = Carbon::parse($break->end_time, 'UTC');
+            $breakStart = Carbon::parse($break->start_time, 'Asia/Manila');
+            $breakEnd = Carbon::parse($break->end_time, 'Asia/Manila');
             
             // Filter out slots that overlap with this break
             $slots = array_filter($slots, function($slot) use ($breakStart, $breakEnd) {
-                $slotStart = Carbon::parse($slot['start'], 'UTC');
-                $slotEnd = Carbon::parse($slot['end'], 'UTC');
+                $slotStart = Carbon::parse($slot['start'], 'Asia/Manila');
+                $slotEnd = Carbon::parse($slot['end'], 'Asia/Manila');
                 
                 // Check if slot is entirely before break or entirely after break
                 return $slotEnd->lte($breakStart) || $slotStart->gte($breakEnd);
@@ -721,87 +764,69 @@ class AvailabilityApiController extends Controller
      */
     public function getCalendarDates($clinicId)
     {
-        $clinic = ClinicInfo::findOrFail($clinicId);
-        
-        // Start with today's date
-        $startDate = Carbon::now()->startOfDay();
-        $endDate = $startDate->copy()->addDays(60); // Look ahead 60 days
-        $availableDates = [];
-        $closedDates = [];
-        
-        // Get all special dates in the range
-        $specialDates = ClinicSpecialDate::where('clinic_id', $clinicId)
-            ->whereDate('date', '>=', $startDate)
-            ->whereDate('date', '<=', $endDate)
-            ->get()
-            ->keyBy(function ($item) {
-                return $item->date->format('Y-m-d');
-            });
-        
-        // Get daily schedules by day of week
-        $dailySchedules = ClinicDailySchedule::where('clinic_id', $clinicId)
-            ->get()
-            ->keyBy('day_of_week');
-        
-        // Get default settings
-        $settings = ClinicAvailabilitySetting::where('clinic_id', $clinicId)->first();
-        $defaultDailyLimit = $settings ? $settings->daily_limit : 20;
-        
-        // Count appointments by date
-        $appointmentCounts = Appointment::where('clinic_id', $clinicId)
-            ->whereDate('appointment_date', '>=', $startDate)
-            ->whereDate('appointment_date', '<=', $endDate)
-            ->select('appointment_date', \DB::raw('count(*) as count'))
-            ->groupBy('appointment_date')
-            ->get();
+        try {
+            $clinic = ClinicInfo::findOrFail($clinicId);
+            $today = Carbon::now();
+            $availableDates = [];
+            $closedDates = [];
             
-        $appointmentCountByDate = [];
-        foreach ($appointmentCounts as $count) {
-            $appointmentCountByDate[$count->appointment_date] = $count->count;
-        }
-        
-        $currentDate = $startDate->copy();
-        
-        while ($currentDate->lte($endDate)) {
-            $dateString = $currentDate->format('Y-m-d');
-            $dayOfWeek = $currentDate->format('l'); // Monday, Tuesday, etc.
-            
-            // Default daily limit for this day
-            $dailyLimit = $defaultDailyLimit;
-            
-            // Check if it's a special date first
-            if (isset($specialDates[$dateString])) {
-                $specialDate = $specialDates[$dateString];
-                if ($specialDate->is_closed) {
-                    $closedDates[] = $dateString;
-                } else {
-                    $availableDates[] = $dateString;
+            // Check today and next 6 days (7 total days)
+            for ($i = 0; $i < 7; $i++) {
+                $checkDate = $today->copy()->addDays($i);
+                $dateString = $checkDate->format('Y-m-d');
+                $dayOfWeek = $checkDate->format('l'); // Monday, Tuesday, etc.
+                
+                // Check if it's a special date first
+                $specialDate = ClinicSpecialDate::where('clinic_id', $clinicId)
+                    ->where('date', $dateString)
+                    ->first();
+                
+                if ($specialDate) {
+                    if ($specialDate->is_closed) {
+                        $closedDates[] = $dateString;
+                    } else {
+                        $availableDates[] = $dateString;
+                    }
+                    continue;
                 }
-            } 
-            // Otherwise check regular schedule
-            else if (isset($dailySchedules[$dayOfWeek])) {
-                $dailySchedule = $dailySchedules[$dayOfWeek];
-                if ($dailySchedule->is_closed) {
-                    $closedDates[] = $dateString;
-                } else {
-                    $availableDates[] = $dateString;
-                }
-            }
-            // If no specific schedule is set, use default (open on weekdays)
-            else {
-                if ($currentDate->isWeekend()) {
+                
+                // Check weekly schedule
+                $dailySchedule = ClinicDailySchedule::where('clinic_id', $clinicId)
+                    ->where('day_of_week', $dayOfWeek)
+                    ->first();
+                
+                if ($dailySchedule && $dailySchedule->is_closed) {
                     $closedDates[] = $dateString;
                 } else {
                     $availableDates[] = $dateString;
                 }
             }
             
-            $currentDate->addDay();
+            // For same-day booking policy, only return today if it's available
+            // Filter out future dates since we enforce same-day booking only
+            $todayString = $today->format('Y-m-d');
+            if (in_array($todayString, $availableDates)) {
+                $availableDates = [$todayString];
+            } else {
+                $availableDates = [];
+                if (!in_array($todayString, $closedDates)) {
+                    $closedDates[] = $todayString;
+                }
+            }
+            
+            return response()->json([
+                'dates' => $availableDates,
+                'closed_dates' => $closedDates
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error in getCalendarDates: " . $e->getMessage());
+            
+            // Fallback - return today only if no errors in basic check
+            return response()->json([
+                'dates' => [Carbon::now()->format('Y-m-d')],
+                'closed_dates' => []
+            ]);
         }
-        
-        return response()->json([
-            'dates' => $availableDates,
-            'closed_dates' => $closedDates
-        ]);
     }
 }

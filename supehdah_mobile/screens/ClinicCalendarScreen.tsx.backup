@@ -1,0 +1,481 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  RefreshControl,
+  SafeAreaView
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Calendar } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
+import { getAvailabilityCalendarDates, getAvailabilityCalendarSlots } from '../src/calendarApi';
+import type { TimeSlot, CalendarSlotsResponse } from '../src/types/calendar';
+import { API } from '../src/api';
+import { slotStateColors, slotStateMessages } from '../src/constants/slotStates';
+import { getSlotState, type SlotState } from '../src/utils/slotUtils';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
+
+// Define Philippines timezone offset constant (UTC+8)
+const PH_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+type MarkedDates = {
+  [date: string]: {
+    selected?: boolean;
+    selectedColor?: string;
+    marked?: boolean;
+    dotColor?: string;
+    disabled?: boolean;
+  };
+};
+
+type ClinicCalendarScreenProps = {
+  route: {
+    params?: {
+      clinicId?: number;
+      clinicName?: string;
+    };
+  };
+  navigation: NavigationProp<ParamListBase> & {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    addListener: (event: string, callback: () => void) => () => void;
+    reset: (state: any) => void;
+  };
+};
+
+const ClinicCalendarScreen: React.FC<ClinicCalendarScreenProps> = ({ route, navigation }) => {
+  const { clinicId = 1, clinicName = 'Clinic' } = route.params || {};
+  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [availabilityInfo, setAvailabilityInfo] = useState<{
+    totalSlots: number;
+    availableSlots: number;
+    bookedSlots: number;
+  }>({ totalSlots: 0, availableSlots: 0, bookedSlots: 0 });
+
+  // Get today's date in YYYY-MM-DD format in Philippines timezone
+  const getTodayPH = () => {
+    const now = new Date();
+    const phTime = new Date(now.getTime() + PH_TIMEZONE_OFFSET);
+    return phTime.toISOString().split('T')[0];
+  };
+
+  // Fetch available dates for the calendar
+  const fetchAvailableDates = async () => {
+    try {
+      console.log('Using Philippines timezone (UTC+8) for all calendar operations');
+      setIsLoading(true);
+      setError(null);
+
+      const response = await getAvailabilityCalendarDates(clinicId);
+      const availableDates: string[] = response.dates || [];
+      const closedDates: string[] = response.closed_dates || [];
+
+      console.log(`Received ${availableDates.length} available dates and ${closedDates.length} closed dates`);
+
+      const marked: MarkedDates = {};
+      
+      // Get today's date in Philippines timezone
+      const today = getTodayPH();
+
+      // Mark future dates as disabled
+      const futureDate = new Date(today);
+      futureDate.setDate(futureDate.getDate() + 1);
+      while (futureDate.toISOString().split('T')[0] <= '2030-12-31') {
+        marked[futureDate.toISOString().split('T')[0]] = {
+          disabled: true,
+          dotColor: slotStateColors.past
+        };
+        futureDate.setDate(futureDate.getDate() + 1);
+      }
+
+      // Mark available dates only for today
+      if (availableDates.includes(today)) {
+        marked[today] = {
+          marked: true,
+          dotColor: slotStateColors.available
+        };
+      }
+
+      // Add clinic closed dates
+      closedDates.forEach((date: string) => {
+        if (date === today) {
+          marked[date] = {
+            marked: true,
+            dotColor: slotStateColors.closed
+          };
+        }
+      });
+
+      setMarkedDates(marked);
+    } catch (err) {
+      console.error('Error fetching available dates:', err);
+      setError('Failed to load available dates. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle date selection in the calendar
+  const handleDateSelect = (day: { dateString: string }) => {
+    const dateString = day.dateString;
+    const today = getTodayPH();
+    
+    // Only allow selecting today's date
+    if (dateString !== today) {
+      Alert.alert(
+        "Date Selection",
+        "Bookings are allowed for today only."
+      );
+      return;
+    }
+
+    // Check if this date is marked in our markedDates object
+    if (!markedDates[dateString]) {
+      Alert.alert(
+        "Date Unavailable",
+        "Sorry, this date is not available for booking. Please try again during business hours."
+      );
+      return;
+    }
+
+    // Check if this is a closed date
+    if (markedDates[dateString]?.dotColor === slotStateColors.closed) {
+      Alert.alert(
+        "Clinic Closed",
+        "Sorry, the clinic is closed on this date. Please try again during business hours."
+      );
+      return;
+    }
+
+    // Update the selected date
+    setSelectedDate(dateString);
+
+    // Update marked dates to show the selected date
+    const updatedMarkedDates = { ...markedDates };
+    Object.keys(updatedMarkedDates).forEach(date => {
+      if (updatedMarkedDates[date].selected) {
+        updatedMarkedDates[date] = {
+          ...updatedMarkedDates[date],
+          selected: false
+        };
+      }
+    });
+
+    updatedMarkedDates[dateString] = {
+      ...updatedMarkedDates[dateString],
+      selected: true,
+      selectedColor: '#2563EB'
+    };
+
+    setMarkedDates(updatedMarkedDates);
+
+    // Fetch time slots for this date
+    fetchTimeSlots(dateString);
+  };
+
+  // Handle time slot selection
+  const handleTimeSlotSelect = (slot: TimeSlot) => {
+    if (!selectedDate) return;
+
+    // Navigate to booking screen with selected slot
+    navigation.navigate('BookAppointment', {
+      clinicId,
+      clinicName,
+      date: selectedDate,
+      timeSlot: slot
+    });
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchAvailableDates();
+  }, [clinicId]);
+
+  // Fetch time slots for a selected date
+  const fetchTimeSlots = async (dateString: string) => {
+    setIsLoadingSlots(true);
+
+    try {
+      const response = await getAvailabilityCalendarSlots(clinicId, dateString);
+      const currentTime = new Date(new Date().getTime() + PH_TIMEZONE_OFFSET);
+      
+      // Map slots with their states
+      const processedSlots: TimeSlot[] = response.slots.map((slot: TimeSlot) => ({
+        ...slot,
+        state: getSlotState(slot, currentTime)
+      }));
+
+      setTimeSlots(processedSlots);
+      
+      // Count slots by state
+      const availableCount = processedSlots.filter((slot: TimeSlot) => slot.state === 'available').length;
+      const bookedCount = processedSlots.filter((slot: TimeSlot) => slot.state === 'booked').length;
+
+      setAvailabilityInfo({
+        totalSlots: processedSlots.length,
+        availableSlots: availableCount,
+        bookedSlots: bookedCount
+      });
+
+    } catch (err) {
+      console.error('Error fetching time slots:', err);
+      setTimeSlots([]);
+      Alert.alert(
+        "Error",
+        "Failed to load available time slots. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={fetchAvailableDates}
+          />
+        }
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4f46e5" />
+            <Text style={styles.loadingText}>Loading calendar...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchAvailableDates}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <Calendar
+              onDayPress={handleDateSelect}
+              markedDates={markedDates}
+              hideExtraDays={true}
+              firstDay={1}
+              enableSwipeMonths={true}
+              theme={{
+                selectedDayBackgroundColor: '#2563EB',
+                todayTextColor: '#2563EB',
+                arrowColor: '#2563EB',
+              }}
+            />
+
+            {selectedDate && (
+              <View style={styles.timeSlotsContainer}>
+                <View style={styles.dateRow}>
+                  <Text style={styles.dateTitle}>
+                    Available Time Slots
+                  </Text>
+                  <View style={styles.badges}>
+                    <View style={[styles.badge, styles.badgeAvailable]}>
+                      <Text style={styles.badgeNumber}>
+                        {availabilityInfo.availableSlots}
+                      </Text>
+                      <Text style={styles.badgeLabel}>available</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {isLoadingSlots ? (
+                  <View style={styles.loadingSlotsContainer}>
+                    <ActivityIndicator size="small" color="#4f46e5" />
+                    <Text style={styles.loadingText}>Loading available slots...</Text>
+                  </View>
+                ) : timeSlots.length === 0 ? (
+                  <Text style={styles.noSlotsText}>
+                    No available time slots for this date.
+                  </Text>
+                ) : (
+                  <View style={styles.slotsList}>
+                    {timeSlots.map((slot, index) => {
+                      const state = getSlotState(slot, new Date());
+                      const isDisabled = state !== 'available';
+                      
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.slotItem,
+                            { backgroundColor: slotStateColors[state] }
+                          ]}
+                          onPress={() => !isDisabled && handleTimeSlotSelect(slot)}
+                          disabled={isDisabled}
+                          activeOpacity={0.85}
+                        >
+                          <View style={styles.slotLeft}>
+                            <Ionicons
+                              name={isDisabled ? "close" : "time-outline"}
+                              size={18}
+                              color="#FFFFFF"
+                            />
+                          </View>
+
+                          <View style={styles.slotMiddle}>
+                            <Text style={[styles.slotText, { color: '#FFFFFF' }]}>
+                              {slot.display_time}
+                            </Text>
+                            <Text style={[styles.slotSubText, { color: '#FFFFFF' }]}>
+                              {slotStateMessages[state]}
+                            </Text>
+                          </View>
+
+                          <View style={styles.slotRight}>
+                            {state === 'available' && (
+                              <Ionicons
+                                name="chevron-forward"
+                                size={18}
+                                color="#FFFFFF"
+                              />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB'
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#6B7280',
+    fontSize: 16
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 16,
+    marginBottom: 10,
+    textAlign: 'center'
+  },
+  retryButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16
+  },
+  timeSlotsContainer: {
+    padding: 16
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  dateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937'
+  },
+  badges: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    alignItems: 'center'
+  },
+  badgeAvailable: {
+    backgroundColor: '#D1FAE5'
+  },
+  badgeNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46'
+  },
+  badgeLabel: {
+    fontSize: 12,
+    color: '#065F46'
+  },
+  loadingSlotsContainer: {
+    padding: 20,
+    alignItems: 'center'
+  },
+  noSlotsText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
+    padding: 20
+  },
+  slotsList: {
+    gap: 8
+  },
+  slotItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8
+  },
+  slotLeft: {
+    marginRight: 12,
+    width: 24,
+    alignItems: 'center'
+  },
+  slotMiddle: {
+    flex: 1
+  },
+  slotText: {
+    fontSize: 16,
+    fontWeight: '500'
+  },
+  slotSubText: {
+    fontSize: 12,
+    marginTop: 2
+  },
+  slotRight: {
+    width: 24,
+    alignItems: 'center'
+  }
+});
+
+export default ClinicCalendarScreen;

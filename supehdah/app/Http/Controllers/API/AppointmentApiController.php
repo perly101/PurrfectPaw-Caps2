@@ -9,6 +9,7 @@ use App\Models\ClinicField;
 use App\Models\ClinicInfo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class AppointmentApiController extends Controller
 {
@@ -39,6 +40,17 @@ class AppointmentApiController extends Controller
             return response()->json([
                 'message' => 'Validation error',
                 'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        // Ensure same-day booking restriction (if configured)
+        $appointmentDate = $request->appointment_date;
+        $today = \Carbon\Carbon::now('Asia/Manila')->format('Y-m-d');
+        
+        if ($appointmentDate !== $today) {
+            return response()->json([
+                'message' => 'Bookings are allowed for today only.',
+                'errors' => ['appointment_date' => ['Invalid appointment date']]
             ], 422);
         }
         
@@ -113,33 +125,72 @@ class AppointmentApiController extends Controller
             'formatted_time' => $appointmentTime
         ]);
         
-        // Create the appointment with properly formatted date/time
-        $appointment = Appointment::create([
-            'clinic_id' => $clinic->id,
-            'owner_name' => $request->owner_name,
-            'owner_phone' => $request->owner_phone,
-            'appointment_date' => $appointmentDate,
-            'appointment_time' => $appointmentTime,
-            'status' => 'pending', // Default status
-        ]);
-        
-        // Process field responses
-        foreach ($request->responses as $response) {
-            $fieldId = $response['field_id'];
-            $value = $response['value'];
+        // Use database transaction to ensure atomicity and prevent race conditions
+        try {
+            $appointment = DB::transaction(function () use ($clinic, $request, $appointmentDate, $appointmentTime) {
+                // Check if this exact slot is already booked (prevent double booking)
+                $existingAppointment = Appointment::where('clinic_id', $clinic->id)
+                    ->where('appointment_date', $appointmentDate)
+                    ->where('appointment_time', $appointmentTime)
+                    ->whereNotIn('status', ['cancelled'])
+                    ->lockForUpdate() // Lock for update to prevent race condition
+                    ->first();
+                
+                if ($existingAppointment) {
+                    throw new \Exception('This time slot is already booked. Please select another time.');
+                }
+                
+                // Check daily appointment limit
+                $todayAppointmentCount = Appointment::where('clinic_id', $clinic->id)
+                    ->where('appointment_date', $appointmentDate)
+                    ->whereNotIn('status', ['cancelled'])
+                    ->count();
+                
+                // Get clinic settings for daily limit
+                $settings = \App\Models\ClinicAvailabilitySetting::where('clinic_id', $clinic->id)->first();
+                $dailyLimit = $settings ? $settings->daily_limit : 20;
+                
+                if ($todayAppointmentCount >= $dailyLimit) {
+                    throw new \Exception('Daily appointment limit reached. No more slots available for today.');
+                }
+                
+                // Create the appointment with properly formatted date/time
+                $appointment = Appointment::create([
+                    'clinic_id' => $clinic->id,
+                    'owner_name' => $request->owner_name,
+                    'owner_phone' => $request->owner_phone,
+                    'appointment_date' => $appointmentDate,
+                    'appointment_time' => $appointmentTime,
+                    'status' => 'pending', // Default status
+                ]);
+                
+                // Process field responses
+                foreach ($request->responses as $response) {
+                    $fieldId = $response['field_id'];
+                    $value = $response['value'];
+                    
+                    // Store the value - we're using json casting in the model
+                    AppointmentFieldValue::create([
+                        'appointment_id' => $appointment->id,
+                        'clinic_field_id' => $fieldId,
+                        'value' => $value, // Will be cast to JSON if array
+                    ]);
+                }
+                
+                return $appointment;
+            });
             
-            // Store the value - we're using json casting in the model
-            AppointmentFieldValue::create([
-                'appointment_id' => $appointment->id,
-                'clinic_field_id' => $fieldId,
-                'value' => $value, // Will be cast to JSON if array
-            ]);
+            return response()->json([
+                'message' => 'Appointment created successfully',
+                'appointment_id' => $appointment->id
+            ], 201);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to create appointment',
+                'error' => $e->getMessage()
+            ], 422);
         }
-        
-        return response()->json([
-            'message' => 'Appointment created successfully',
-            'appointment_id' => $appointment->id
-        ], 201);
     }
     
     /**

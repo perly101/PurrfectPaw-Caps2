@@ -35,22 +35,35 @@ class AppointmentController extends Controller
             $clinic = ClinicInfo::findOrFail($clinicId);
             
             // Log the request data for debugging
-            Log::info('Creating appointment with data:', [
+            Log::info('=== APPOINTMENT BOOKING DEBUG ===');
+            Log::info('Mobile app sent:', [
                 'clinic_id' => $clinicId,
                 'owner_name' => $request->owner_name,
                 'appointment_date' => $request->appointment_date,
                 'appointment_time' => $request->appointment_time,
-                'responses_count' => count($request->responses ?? [])
+                'raw_request' => $request->all()
             ]);
-
-            // Create appointment with date and time
-            $appointment = Appointment::create([
+            
+            // Create the appointment data
+            $appointmentData = [
                 'clinic_id' => $clinic->id,
                 'owner_name' => $request->owner_name,
                 'owner_phone' => $request->owner_phone,
                 'appointment_date' => $request->appointment_date,
                 'appointment_time' => $request->appointment_time,
-                'status' => 'confirmed', // Set to confirmed for mobile appointments
+                'status' => 'confirmed',
+            ];
+            
+            Log::info('About to store in database:', $appointmentData);
+
+            // Create appointment with date and time
+            $appointment = Appointment::create($appointmentData);
+            
+            Log::info('Appointment created with ID:', [
+                'id' => $appointment->id,
+                'stored_date' => $appointment->appointment_date,
+                'stored_time' => $appointment->appointment_time,
+                'created_at' => $appointment->created_at
             ]);
 
             // Process custom field responses if provided

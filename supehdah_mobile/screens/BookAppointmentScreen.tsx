@@ -19,6 +19,7 @@ import { bookAppointment, getAvailabilitySlots, API, Slot, CustomField, Appointm
 import { ROUTES } from '../src/routes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { BOOKING_CONFIG } from '../src/config/bookingConfig';
 
 // Colors
 const PRIMARY = '#4A6FA5';
@@ -199,6 +200,19 @@ const BookAppointmentScreen = ({ route }: AppointmentFormProps) => {
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
+      // Check if same-day booking restriction is enabled
+      if (BOOKING_CONFIG.samedayOnly) {
+        const today = new Date();
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        // If user selects a different date than today
+        if (selectedDateOnly.getTime() !== todayOnly.getTime()) {
+          Alert.alert('Date Selection', BOOKING_CONFIG.samedayMessage, [{ text: 'OK' }]);
+          return; // Don't update the selected date
+        }
+      }
+      
       setSelectedDate(selectedDate);
       // Reset selected time slot when date changes
       setSelectedSlot(null);
@@ -362,24 +376,49 @@ const BookAppointmentScreen = ({ route }: AppointmentFormProps) => {
       if (response.appointment_id) {
         console.log(`Booking successful! Appointment ID: ${response.appointment_id}`);
         
-        // Ensure this appointment shows up immediately in the calendar
+        // Immediately invalidate all cached availability data to force fresh data
         try {
+          const dateKey = format(selectedDate, 'yyyy-MM-dd');
+          
+          // Clear multiple cache keys to ensure fresh data
+          await AsyncStorage.multiRemove([
+            `availabilitySlots_${clinicId}_${dateKey}`,
+            `slots_cache_${clinicId}_${dateKey}`,
+            `localBookings_${clinicId}_${dateKey}`,
+            `refresh_calendar_${clinicId}_${dateKey}`
+          ]);
+          
           // Create a special reference to force calendar to refresh this appointment
-          await AsyncStorage.setItem(`refresh_calendar_${clinicId}_${format(selectedDate, 'yyyy-MM-dd')}`, 
+          await AsyncStorage.setItem(`refresh_calendar_${clinicId}_${dateKey}`, 
             JSON.stringify({
               timestamp: Date.now(),
-              appointmentId: response.appointment_id
+              appointmentId: response.appointment_id,
+              slot: formattedTime,
+              action: 'book'
             })
           );
+          
+          // Also store locally booked slots for immediate UI updates
+          const localBookingsKey = `localBookings_${clinicId}_${dateKey}`;
+          const existingBookings = await AsyncStorage.getItem(localBookingsKey);
+          const bookings = existingBookings ? JSON.parse(existingBookings) : [];
+          bookings.push({
+            appointment_id: response.appointment_id,
+            appointment_time: formattedTime,
+            timestamp: Date.now()
+          });
+          await AsyncStorage.setItem(localBookingsKey, JSON.stringify(bookings));
+          
+          console.log('Cleared availability cache and stored local booking to force refresh');
         } catch (e) {
-          console.log('Failed to save calendar refresh marker:', e);
+          console.log('Failed to clear cache:', e);
         }
       }
       
       // Show success message
       Alert.alert(
         'Success',
-        'Your appointment has been booked successfully!',
+        'Your appointment has been booked successfully! The selected time slot is now unavailable for other bookings.',
         [{ 
           text: 'OK', 
           onPress: () => {
@@ -692,7 +731,8 @@ const BookAppointmentScreen = ({ route }: AppointmentFormProps) => {
                 mode="date"
                 display="default"
                 onChange={onDateChange}
-                minimumDate={new Date()}
+                minimumDate={BOOKING_CONFIG.samedayOnly ? new Date() : new Date()}
+                maximumDate={BOOKING_CONFIG.samedayOnly ? new Date() : undefined}
               />
             )}
           </View>

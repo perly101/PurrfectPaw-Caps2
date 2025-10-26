@@ -1,0 +1,542 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  SafeAreaView,
+  RefreshControl
+} from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAvailabilityCalendarDates, getAvailabilityCalendarSlots } from '../src/calendarApi';
+import { 
+  TimeSlot,
+  SlotState,
+  slotColors,
+  slotStyles,
+  DEFAULT_SLOT_DURATION
+} from '../src/types/calendar';
+import { 
+  updateSlotAvailability, 
+  isSlotEnabled, 
+  refreshSlotStates 
+} from '../src/utils/slotHelpers';
+
+interface Props {
+  navigation: any;
+  route: { params: { clinicId: string; clinicName: string } };
+}
+
+export default function ClinicCalendarScreen({ navigation, route }: Props) {
+  const { clinicId, clinicName } = route.params;
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState<any>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [availabilityInfo, setAvailabilityInfo] = useState({
+    totalSlots: 0,
+    availableSlots: 0,
+    bookedSlots: 0
+  });
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchAvailableDates();
+  }, [clinicId]);
+
+  // Set up refresh on focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (selectedDate) {
+        console.log('Screen focused, refreshing time slots...');
+        clearAsyncStorage()
+        .then(() => {
+          console.log('🔄 Cache cleared, fetching fresh time slots...');
+          fetchTimeSlots(selectedDate);
+        })
+        .catch(err => {
+          console.error('Error during focus refresh:', err);
+        });
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, selectedDate]);
+
+  // Regular refresh of slot states
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      const interval = setInterval(() => {
+        const updatedSlots = refreshSlotStates(timeSlots);
+        setTimeSlots(updatedSlots);
+      }, 60000); // Check every minute
+      
+      return () => clearInterval(interval);
+    }
+  }, [timeSlots]);
+
+  // Fetch available dates for the calendar
+  const fetchAvailableDates = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await getAvailabilityCalendarDates(clinicId);
+      const availableDates = response.availableDates || [];
+      const closedDates = response.closedDates || [];
+
+      // Mark available dates with green dots
+      const marked: any = {};
+      availableDates.forEach((date: string) => {
+        marked[date] = {
+          marked: true,
+          dotColor: '#34D399'
+        };
+      });
+
+      // Only mark today as available
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      marked[todayString] = {
+        marked: true,
+        dotColor: '#34D399'
+      };
+
+      setMarkedDates(marked);
+    } catch (err) {
+      console.error('Error fetching available dates:', err);
+      setError('Failed to load available dates. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check token validity
+  const checkTokenValid = async () => {
+    const token = await AsyncStorage.getItem('token') || 
+                await AsyncStorage.getItem('userToken') || 
+                await AsyncStorage.getItem('accessToken');
+                
+    if (!token) {
+      console.log('❌ No authentication token found');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      
+      Alert.alert(
+        'Authentication Required',
+        'Please log in to continue.',
+        [{ text: 'OK' }]
+      );
+      
+      return false;
+    }
+    return true;
+  };
+
+  // Handle date selection
+  const handleDateSelect = async (day: { dateString: string }) => {
+    const dateString = day.dateString;
+    
+    // Only allow booking for today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(dateString);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate.getTime() !== today.getTime()) {
+      Alert.alert(
+        "Date Not Available",
+        "Bookings are allowed for today only."
+      );
+      return;
+    }
+
+    setSelectedDate(dateString);
+    
+    // Clear old marked dates and mark the selected date
+    const updatedMarkedDates = { ...markedDates };
+    Object.keys(updatedMarkedDates).forEach(date => {
+      if (updatedMarkedDates[date].selected) {
+        updatedMarkedDates[date] = {
+          ...updatedMarkedDates[date],
+          selected: false
+        };
+      }
+    });
+
+    updatedMarkedDates[dateString] = {
+      ...updatedMarkedDates[dateString],
+      selected: true,
+      selectedColor: '#2563EB'
+    };
+
+    setMarkedDates(updatedMarkedDates);
+    fetchTimeSlots(dateString);
+  };
+
+  // Fetch time slots
+  const fetchTimeSlots = async (dateString: string) => {
+    setIsLoadingSlots(true);
+
+    try {
+      // Get fresh data with cache buster
+      const cacheBuster = new Date().getTime();
+      const response = await getAvailabilityCalendarSlots(clinicId, dateString + `?cb=${cacheBuster}`);
+      
+      let slotsData = response.slots || [];
+      const currentTime = new Date();
+
+      // Process slots to determine their states
+      const processedSlots = slotsData.map((slot: TimeSlot) => {
+        const slotTime = new Date(dateString + 'T' + slot.start);
+        const slotEndTime = new Date(slotTime.getTime() + (slot.duration || DEFAULT_SLOT_DURATION) * 60000);
+        
+        let state: SlotState = 'available';
+        let stateMessage: string | undefined;
+
+        // Check if slot is in the past
+        if (slotEndTime <= currentTime) {
+          state = 'past';
+          stateMessage = 'Time already has passed';
+        }
+        // Check if slot is booked
+        else if (slot.isBooked || slot.status === 'booked') {
+          state = 'booked';
+          stateMessage = 'Already booked';
+        }
+        // Check if slot is closed/unavailable
+        else if ((slot as any).availability === false || (slot as any).available === false) {
+          state = 'closed';
+          stateMessage = 'Not available';
+        }
+        
+        return {
+          ...slot,
+          state,
+          stateMessage,
+          duration: DEFAULT_SLOT_DURATION
+        };
+      });
+
+      setTimeSlots(processedSlots);
+      
+      // Update availability info
+      const availableCount = processedSlots.filter(slot => slot.state === 'available').length;
+      const bookedCount = processedSlots.filter(slot => slot.state === 'booked').length;
+      
+      setAvailabilityInfo({
+        totalSlots: processedSlots.length,
+        availableSlots: availableCount,
+        bookedSlots: bookedCount
+      });
+
+    } catch (err: any) {
+      console.error('Error fetching time slots:', err);
+      setTimeSlots([]);
+      Alert.alert(
+        "Error",
+        "Failed to load time slots. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  // Handle time slot selection
+  const handleTimeSlotSelect = (slot: TimeSlot) => {
+    if (!selectedDate) return;
+
+    // Only allow selecting available slots
+    if (slot.state !== 'available') {
+      Alert.alert(
+        "Slot Not Available",
+        slot.stateMessage || "This time slot cannot be selected."
+      );
+      return;
+    }
+
+    navigation.navigate('ClinicAppointments', {
+      clinicId,
+      clinicName,
+      date: selectedDate,
+      timeSlot: slot
+    });
+  };
+
+  // Pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    
+    try {
+      const tokenValid = await checkTokenValid();
+      if (!tokenValid) {
+        setRefreshing(false);
+        return;
+      }
+      
+      await fetchAvailableDates();
+      if (selectedDate) {
+        await fetchTimeSlots(selectedDate);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Clear AsyncStorage cache
+  const clearAsyncStorage = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(key => key.includes('cache_') || key.includes('bookings_'));
+      if (cacheKeys.length > 0) {
+        await AsyncStorage.multiRemove(cacheKeys);
+        console.log('🗑️ Cleared cached data');
+      }
+    } catch (e) {
+      console.error('Error clearing cache:', e);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={22} color="#ffffff" />
+          </TouchableOpacity>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.headerClinic}>{clinicName}</Text>
+            <Text style={styles.headerSubtitle}>Choose a time — slots update in real time</Text>
+          </View>
+        </View>
+
+        {/* Calendar */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4f46e5" />
+            <Text style={styles.loadingText}>Loading calendar...</Text>
+          </View>
+        ) : (
+          <View style={styles.calendarCard}>
+            <Calendar
+              markedDates={markedDates}
+              onDayPress={handleDateSelect}
+              hideExtraDays={true}
+              enableSwipeMonths={true}
+              theme={{
+                selectedDayBackgroundColor: '#2563EB',
+                todayTextColor: '#2563EB',
+                arrowColor: '#4f46e5',
+                dotColor: '#34D399',
+                textDayFontWeight: '600',
+                textMonthFontWeight: '700',
+                textDayHeaderFontWeight: '600'
+              }}
+              style={styles.calendar}
+            />
+          </View>
+        )}
+
+        {/* Time slots */}
+        {selectedDate && (
+          <View style={styles.timeSlotsContainer}>
+            <View style={styles.dateRow}>
+              <Text style={styles.dateTitle}>{selectedDate}</Text>
+              <View style={styles.badges}>
+                <View style={[styles.badge, styles.badgeInfo]}>
+                  <Text style={styles.badgeText}>
+                    {availabilityInfo.availableSlots} available
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {isLoadingSlots ? (
+              <View style={styles.loadingSlotsContainer}>
+                <ActivityIndicator size="small" color="#4f46e5" />
+                <Text style={styles.loadingText}>Loading available slots...</Text>
+              </View>
+            ) : timeSlots.length === 0 ? (
+              <Text style={styles.noSlotsText}>
+                No time slots available for this date.
+              </Text>
+            ) : (
+              <View style={styles.slotsList}>
+                {timeSlots.map((slot, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.slotItem,
+                      { backgroundColor: slotColors[slot.state || 'closed'] }
+                    ]}
+                    onPress={() => handleTimeSlotSelect(slot)}
+                    disabled={slot.state !== 'available'}
+                  >
+                    <View style={styles.slotLeft}>
+                      <Ionicons
+                        name={slot.state === 'available' ? 'time-outline' : 'close-circle-outline'}
+                        size={18}
+                        color="#ffffff"
+                      />
+                    </View>
+                    <View style={styles.slotMiddle}>
+                      <Text style={styles.slotText}>{slot.display_time}</Text>
+                      <Text style={styles.slotSubText}>
+                        {slot.stateMessage || (slot.state === 'available' ? 'Available' : 'Not available')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F3F4F6'
+  },
+  container: {
+    flex: 1
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16
+  },
+  backButton: {
+    marginRight: 12
+  },
+  headerTextWrap: {
+    flex: 1
+  },
+  headerClinic: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#e0e7ff'
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center'
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#6b7280'
+  },
+  calendarCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    margin: 16,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8
+      },
+      android: {
+        elevation: 4
+      }
+    })
+  },
+  calendar: {
+    borderRadius: 12
+  },
+  timeSlotsContainer: {
+    padding: 16
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16
+  },
+  dateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827'
+  },
+  badges: {
+    flexDirection: 'row'
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginLeft: 8
+  },
+  badgeInfo: {
+    backgroundColor: '#4f46e5'
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  slotsList: {
+    marginTop: 8
+  },
+  slotItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12
+  },
+  slotLeft: {
+    width: 40,
+    alignItems: 'center'
+  },
+  slotMiddle: {
+    flex: 1,
+    marginLeft: 12
+  },
+  slotText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  slotSubText: {
+    fontSize: 13,
+    color: '#ffffff',
+    opacity: 0.9,
+    marginTop: 2
+  },
+  noSlotsText: {
+    textAlign: 'center',
+    color: '#6b7280',
+    marginTop: 12
+  }
+});
